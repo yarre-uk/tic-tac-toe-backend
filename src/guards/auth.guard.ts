@@ -8,6 +8,7 @@ import { Request } from 'express';
 import { Observable } from 'rxjs';
 import { isDefined } from '../utils';
 import { JwtService } from '@nestjs/jwt';
+import { JwtUserPayload } from '@/auth/auth.service';
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
@@ -24,7 +25,7 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const payload: unknown = this.jwtService.decode(accessToken);
+      const payload = this.jwtService.verify<JwtUserPayload>(accessToken);
       request['user'] = payload;
     } catch {
       throw new UnauthorizedException('Provided token is invalid!');

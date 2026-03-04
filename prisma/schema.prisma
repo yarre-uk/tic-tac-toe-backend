@@ -25,5 +25,5 @@ model User {
   email    String? @unique
   nickname String  @unique
   password String
-  roles    Role[]
+  role    Role
 }

@@ -5,24 +5,28 @@ import {
   InternalServerErrorException,
 } from '@nestjs/common';
 import { Observable } from 'rxjs';
-import { PrismaService } from '../services/prisma.client';
 import { Reflector } from '@nestjs/core';
 import { isDefined } from '../utils';
+import { Role } from '@/generated/prisma/enums';
+import { JwtUserPayload } from '@/auth/auth.service';
 
-export const Roles = Reflector.createDecorator<string[]>();
+const RolePriorities = {
+  Admin: 3,
+  Moderator: 2,
+  User: 1,
+} as const satisfies Record<Role, number>;
+
+export const RequiresRole = Reflector.createDecorator<Role>();
 
 @Injectable()
 export class RolesGuard implements CanActivate {
-  constructor(
-    private readonly prismaService: PrismaService,
-    private readonly reflector: Reflector,
-  ) {}
+  constructor(private readonly reflector: Reflector) {}
 
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
     const request = context.switchToHttp().getRequest<Request>();
-    const user = request['user'] as unknown;
+    const user = request['user'] as JwtUserPayload;
 
     if (!isDefined(user)) {
       throw new InternalServerErrorException(
@@ -30,13 +34,21 @@ export class RolesGuard implements CanActivate {
       );
     }
 
-    const roles = this.reflector.get(Roles, context.getHandler());
+    const minimumRole = this.reflector.get(RequiresRole, context.getHandler());
 
-    if (!isDefined(roles) || roles.length === 0) {
+    if (!isDefined(minimumRole)) {
       return true;
     }
 
-    //TODO check roles
+    const userRole = user.role;
+
+    if (!isDefined(userRole)) {
+      throw new InternalServerErrorException('No user role was found!');
+    }
+
+    if (RolePriorities[minimumRole] > RolePriorities[userRole]) {
+      return false;
+    }
 
     return true;
   }

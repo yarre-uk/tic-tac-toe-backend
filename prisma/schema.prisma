@@ -25,5 +25,15 @@ model User {
   email    String? @unique
   nickname String  @unique
   password String
-  role    Role
+  role     Role
+
+  refreshTokens RefreshToken[]
+}
+
+model RefreshToken {
+  id        String   @id
+  token     String
+  expiresAt DateTime
+  userId    String
+  user      User     @relation(fields: [userId], references: [id])
 }

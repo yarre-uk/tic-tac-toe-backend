@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '@/services/prisma.client';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
@@ -23,29 +27,55 @@ export class UsersService {
   }
 
   findByEmail(email: string) {
-    return this.prismaService.user.findUnique({ where: { email } });
+    const user = this.prismaService.user.findUnique({ where: { email } });
+
+    if (!isDefined(user)) {
+      throw new NotFoundException(`User ${email} not found`);
+    }
+
+    return user;
   }
 
   findByNickname(nickname: string) {
-    return this.prismaService.user.findUnique({ where: { nickname } });
+    const user = this.prismaService.user.findUnique({ where: { nickname } });
+
+    if (!isDefined(user)) {
+      throw new NotFoundException(`User ${nickname} not found`);
+    }
+
+    return user;
   }
 
   create(createUserDto: CreateUserDto) {
-    return this.prismaService.user.create({
-      data: {
-        ...createUserDto,
-        role: 'User',
-      },
-    });
+    try {
+      return this.prismaService.user.create({
+        data: {
+          ...createUserDto,
+          role: 'User',
+        },
+      });
+    } catch {
+      throw new InternalServerErrorException(
+        `Failed to create a user: ${createUserDto.nickname}`,
+      );
+    }
   }
 
   async update(id: string, data: UpdateUserDto) {
     await this.findOne(id);
-    return this.prismaService.user.update({ where: { id }, data });
+    try {
+      return this.prismaService.user.update({ where: { id }, data });
+    } catch {
+      throw new InternalServerErrorException(`Failed to update user: ${id}`);
+    }
   }
 
   async delete(id: string) {
     await this.findOne(id);
-    return this.prismaService.user.delete({ where: { id } });
+    try {
+      return this.prismaService.user.delete({ where: { id } });
+    } catch {
+      throw new InternalServerErrorException(`Failed to delete user: ${id}`);
+    }
   }
 }

@@ -1,5 +1,7 @@
 name: Checks
 
+# TODO improve
+
 on:
   push:
     branches:

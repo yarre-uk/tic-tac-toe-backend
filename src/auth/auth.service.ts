@@ -9,6 +9,7 @@ import { v7 as uuidv7 } from 'uuid';
 import { PrismaService } from '@/services/prisma.client';
 import { ConfigService } from '@nestjs/config';
 import { hash, compare } from 'bcrypt';
+import { ChangePasswordDto } from './dtos/change-password.dtp';
 
 interface TokensResponse {
   accessToken: string;
@@ -96,7 +97,7 @@ export class AuthService {
   }
 
   async signUp(dto: SignUpDto): Promise<TokensResponse> {
-    const hashedPassword = await hash(dto.password, 10);
+    const hashedPassword = await hash(dto.password, this.bcryptRounds);
 
     const user = await this.usersService.create({
       ...dto,
@@ -163,5 +164,29 @@ export class AuthService {
     });
 
     return this._createTokens(stored.user.id, stored.user.role);
+  }
+
+  async changePassword(dto: ChangePasswordDto) {
+    const user = await this.usersService.findByNickname(dto.nickname);
+
+    const isPasswordCorrect = await compare(
+      dto.oldPassword,
+      user?.password ?? DUMMY_PASSWORD_HASH,
+    );
+
+    if (!isDefined(user) || !isPasswordCorrect) {
+      throw new UnauthorizedException('Credentials are incorrect!');
+    }
+
+    const newPasswordHashed = await hash(dto.newPassword, this.bcryptRounds);
+
+    await this.usersService.update(user.id, {
+      password: newPasswordHashed,
+    });
+
+    await this.prismaService.refreshToken.updateMany({
+      where: { userId: user.id },
+      data: { isActive: false },
+    });
   }
 }

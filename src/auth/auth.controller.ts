@@ -12,6 +12,7 @@ import { SignUpDto as SignUpDto } from './dtos/sign-up.dto';
 import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { isDefined } from '@/utils';
+import { ChangePasswordDto } from './dtos/change-password.dtp';
 
 export const REFRESH_TOKEN_KEY = 'refreshToken';
 
@@ -22,7 +23,7 @@ export class AuthController {
     private readonly configService: ConfigService,
   ) {}
 
-  private _setRefreshTokenCookie(response: Response, refreshToken: string) {
+  private setRefreshTokenCookie(response: Response, refreshToken: string) {
     response.cookie(REFRESH_TOKEN_KEY, refreshToken, {
       maxAge:
         +this.configService.getOrThrow<number>('REFRESH_TOKEN_TTL') * 1000,
@@ -39,7 +40,7 @@ export class AuthController {
   ) {
     const { accessToken, refreshToken } = await this.authService.signIn(dto);
 
-    this._setRefreshTokenCookie(response, refreshToken);
+    this.setRefreshTokenCookie(response, refreshToken);
 
     return { accessToken };
   }
@@ -51,7 +52,7 @@ export class AuthController {
   ) {
     const { accessToken, refreshToken } = await this.authService.signUp(dto);
 
-    this._setRefreshTokenCookie(response, refreshToken);
+    this.setRefreshTokenCookie(response, refreshToken);
 
     return { accessToken };
   }
@@ -92,8 +93,13 @@ export class AuthController {
     const { accessToken, refreshToken: newRefreshToken } =
       await this.authService.refresh(refreshToken);
 
-    this._setRefreshTokenCookie(response, newRefreshToken);
+    this.setRefreshTokenCookie(response, newRefreshToken);
 
     return { accessToken };
+  }
+
+  @Post('change-password')
+  async changePassword(@Body() dto: ChangePasswordDto) {
+    return this.authService.changePassword(dto);
   }
 }

@@ -32,8 +32,12 @@ model User {
 
 model RefreshToken {
   id        String   @id
-  token     String
   expiresAt DateTime
-  userId    String
-  user      User     @relation(fields: [userId], references: [id])
+  createdAt DateTime @default(now())
+  isActive  Boolean  @default(true)
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
+
+  @@index([userId, isActive])
 }

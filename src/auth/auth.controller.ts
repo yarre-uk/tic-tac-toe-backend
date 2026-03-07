@@ -27,6 +27,9 @@ export class AuthController {
 
   @Post('logout')
   logOut() {
-    return this.authService.logOut();
+    //TODO get actual token from cookies
+    const refreshToken = '';
+
+    return this.authService.logOut(refreshToken);
   }
 }

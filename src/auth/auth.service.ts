@@ -41,6 +41,39 @@ export class AuthService {
       +this.configService.getOrThrow<number>('REFRESH_TOKEN_TTL');
   }
 
+  private async _createTokens(
+    userId: string,
+    role: Role,
+  ): Promise<TokensResponse> {
+    const accessPayload = {
+      sub: userId,
+      role,
+    } satisfies JwtAccessTokenPayload;
+    const accessToken = this.jwtService.sign(accessPayload, {
+      expiresIn: this._accessTokenTtl,
+    });
+
+    const refreshId = uuidv7();
+    const refreshPayload = {
+      sub: userId,
+      jti: refreshId,
+    } satisfies JwtRefreshTokenPayload;
+
+    const refreshToken = this.jwtService.sign(refreshPayload, {
+      expiresIn: this._refreshTokenTtl,
+    });
+
+    await this.prismaService.refreshToken.create({
+      data: {
+        id: refreshId,
+        expiresAt: new Date(Date.now() + this._refreshTokenTtl * 1000),
+        userId: userId,
+      },
+    });
+
+    return { accessToken, refreshToken };
+  }
+
   async signIn(dto: SignInDto): Promise<TokensResponse> {
     const user = await this.usersService.findByNickname(dto.nickname);
 
@@ -48,68 +81,71 @@ export class AuthService {
       throw new UnauthorizedException('Credentials are incorrect!');
     }
 
-    const accessPayload = {
-      sub: user.id,
-      role: user.role,
-    } satisfies JwtAccessTokenPayload;
-    const accessToken = this.jwtService.sign(accessPayload, {
-      expiresIn: this._accessTokenTtl,
-    });
-
-    const refreshId = uuidv7();
-    const refreshPayload = {
-      sub: user.id,
-      jti: refreshId,
-    } satisfies JwtRefreshTokenPayload;
-
-    const refreshToken = this.jwtService.sign(refreshPayload, {
-      expiresIn: this._refreshTokenTtl,
-    });
-
-    await this.prismaService.refreshToken.create({
-      data: {
-        id: refreshId,
-        token: refreshToken,
-        expiresAt: new Date(Date.now() + this._refreshTokenTtl),
-        userId: user.id,
-      },
-    });
-
-    return { accessToken, refreshToken };
+    return this._createTokens(user.id, user.role);
   }
 
   async signUp(dto: SignUpDto): Promise<TokensResponse> {
     const user = await this.usersService.create(dto);
 
-    const accessPayload = {
-      sub: user.id,
-      role: user.role,
-    } satisfies JwtAccessTokenPayload;
-    const accessToken = this.jwtService.sign(accessPayload, {
-      expiresIn: this._accessTokenTtl,
+    return this._createTokens(user.id, user.role);
+  }
+
+  async logOut(refreshToken: string): Promise<void> {
+    let payload: JwtRefreshTokenPayload;
+
+    try {
+      payload = this.jwtService.verify<JwtRefreshTokenPayload>(refreshToken);
+    } catch {
+      throw new UnauthorizedException('Provided token is invalid!');
+    }
+
+    const stored = await this.prismaService.refreshToken.findUnique({
+      where: { id: payload.jti },
     });
 
-    const refreshId = uuidv7();
-    const refreshPayload = {
-      sub: user.id,
-      jti: refreshId,
-    } satisfies JwtRefreshTokenPayload;
+    if (!isDefined(stored)) {
+      throw new UnauthorizedException('Token not found');
+    }
 
-    const refreshToken = this.jwtService.sign(refreshPayload, {
-      expiresIn: this._refreshTokenTtl,
+    if (!stored.isActive) {
+      throw new UnauthorizedException('Token already revoked');
+    }
+
+    await this.prismaService.refreshToken.update({
+      where: { id: payload.jti },
+      data: { isActive: false },
     });
+  }
 
-    await this.prismaService.refreshToken.create({
-      data: {
-        id: refreshId,
-        token: refreshToken,
-        expiresAt: new Date(Date.now() + this._refreshTokenTtl),
-        userId: user.id,
+  async refresh(refreshToken: string) {
+    let payload: JwtRefreshTokenPayload;
+
+    try {
+      payload = this.jwtService.verify<JwtRefreshTokenPayload>(refreshToken);
+    } catch {
+      throw new UnauthorizedException('Provided token is invalid!');
+    }
+
+    const stored = await this.prismaService.refreshToken.findUnique({
+      where: { id: payload.jti },
+      include: {
+        user: true,
       },
     });
 
-    return { accessToken, refreshToken };
-  }
+    if (!isDefined(stored)) {
+      throw new UnauthorizedException('Token not found');
+    }
 
-  logOut(): void {}
+    if (!stored.isActive) {
+      throw new UnauthorizedException('Token already revoked');
+    }
+
+    await this.prismaService.refreshToken.update({
+      where: { id: payload.jti },
+      data: { isActive: false },
+    });
+
+    return this._createTokens(stored.user.id, stored.user.role);
+  }
 }

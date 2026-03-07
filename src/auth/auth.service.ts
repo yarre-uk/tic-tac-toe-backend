@@ -8,6 +8,7 @@ import { isDefined } from '@/utils';
 import { v7 as uuidv7 } from 'uuid';
 import { PrismaService } from '@/services/prisma.client';
 import { ConfigService } from '@nestjs/config';
+import { hash, compare } from 'bcrypt';
 
 interface TokensResponse {
   accessToken: string;
@@ -24,10 +25,14 @@ export interface JwtRefreshTokenPayload {
   jti: string;
 }
 
+const DUMMY_PASSWORD_HASH =
+  '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
+
 @Injectable()
 export class AuthService {
-  private readonly _accessTokenTtl: number;
-  private readonly _refreshTokenTtl: number;
+  private readonly accessTokenTtl: number;
+  private readonly refreshTokenTtl: number;
+  private readonly bcryptRounds: number;
 
   constructor(
     private readonly jwtService: JwtService,
@@ -35,10 +40,11 @@ export class AuthService {
     private readonly prismaService: PrismaService,
     private readonly configService: ConfigService,
   ) {
-    this._accessTokenTtl =
+    this.accessTokenTtl =
       +this.configService.getOrThrow<number>('ACCESS_TOKEN_TTL');
-    this._refreshTokenTtl =
+    this.refreshTokenTtl =
       +this.configService.getOrThrow<number>('REFRESH_TOKEN_TTL');
+    this.bcryptRounds = +this.configService.get<number>('BCRYPT_ROUNDS', 10);
   }
 
   private async _createTokens(
@@ -50,7 +56,7 @@ export class AuthService {
       role,
     } satisfies JwtAccessTokenPayload;
     const accessToken = this.jwtService.sign(accessPayload, {
-      expiresIn: this._accessTokenTtl,
+      expiresIn: this.accessTokenTtl,
     });
 
     const refreshId = uuidv7();
@@ -60,13 +66,13 @@ export class AuthService {
     } satisfies JwtRefreshTokenPayload;
 
     const refreshToken = this.jwtService.sign(refreshPayload, {
-      expiresIn: this._refreshTokenTtl,
+      expiresIn: this.refreshTokenTtl,
     });
 
     await this.prismaService.refreshToken.create({
       data: {
         id: refreshId,
-        expiresAt: new Date(Date.now() + this._refreshTokenTtl * 1000),
+        expiresAt: new Date(Date.now() + this.refreshTokenTtl * 1000),
         userId: userId,
       },
     });
@@ -77,7 +83,12 @@ export class AuthService {
   async signIn(dto: SignInDto): Promise<TokensResponse> {
     const user = await this.usersService.findByNickname(dto.nickname);
 
-    if (!isDefined(user) || user.password !== dto.password) {
+    const isPasswordCorrect = await compare(
+      dto.password,
+      user?.password ?? DUMMY_PASSWORD_HASH,
+    );
+
+    if (!isDefined(user) || !isPasswordCorrect) {
       throw new UnauthorizedException('Credentials are incorrect!');
     }
 
@@ -85,7 +96,12 @@ export class AuthService {
   }
 
   async signUp(dto: SignUpDto): Promise<TokensResponse> {
-    const user = await this.usersService.create(dto);
+    const hashedPassword = await hash(dto.password, 10);
+
+    const user = await this.usersService.create({
+      ...dto,
+      password: hashedPassword,
+    });
 
     return this._createTokens(user.id, user.role);
   }

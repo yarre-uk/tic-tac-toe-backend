@@ -9,14 +9,29 @@ import { Observable } from 'rxjs';
 import { isDefined } from '../utils';
 import { JwtService } from '@nestjs/jwt';
 import { JwtAccessTokenPayload } from '@/auth/auth.service';
+import { Reflector } from '@nestjs/core';
+
+export const IsPublic = Reflector.createDecorator<boolean>();
 
 @Injectable()
 export class JwtAuthGuard implements CanActivate {
-  constructor(private readonly jwtService: JwtService) {}
+  constructor(
+    private readonly jwtService: JwtService,
+    private readonly reflector: Reflector,
+  ) {}
 
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
+    const isPublic = this.reflector.getAllAndOverride(IsPublic, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (isPublic) {
+      return true;
+    }
+
     const request = context.switchToHttp().getRequest<Request>();
     const accessToken = this.extractToken(request);
 

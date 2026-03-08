@@ -13,6 +13,7 @@ import type { Request, Response } from 'express';
 import { ConfigService } from '@nestjs/config';
 import { isDefined } from '@/utils';
 import { ChangePasswordDto } from './dtos/change-password.dtp';
+import { IsPublic } from '@/guards/auth.guard';
 
 export const REFRESH_TOKEN_KEY = 'refreshToken';
 
@@ -33,6 +34,7 @@ export class AuthController {
     });
   }
 
+  @IsPublic()
   @Post('sign-in')
   async signIn(
     @Res({ passthrough: true }) response: Response,
@@ -45,6 +47,7 @@ export class AuthController {
     return { accessToken };
   }
 
+  @IsPublic()
   @Post('sign-up')
   async signUp(
     @Res({ passthrough: true }) response: Response,
@@ -77,6 +80,7 @@ export class AuthController {
     return { message: 'Logged out successfully' };
   }
 
+  @IsPublic()
   @Post('refresh')
   async refresh(
     @Res({ passthrough: true }) response: Response,

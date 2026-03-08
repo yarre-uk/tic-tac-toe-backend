@@ -25,6 +25,15 @@ export class RolesGuard implements CanActivate {
   canActivate(
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
+    const minimumRole = this.reflector.getAllAndOverride(RequiresRole, [
+      context.getHandler(),
+      context.getClass(),
+    ]);
+
+    if (!isDefined(minimumRole)) {
+      return true;
+    }
+
     const request = context.switchToHttp().getRequest<Request>();
     const user = request['user'] as JwtAccessTokenPayload;
 
@@ -32,12 +41,6 @@ export class RolesGuard implements CanActivate {
       throw new InternalServerErrorException(
         'No user property in the request object found!',
       );
-    }
-
-    const minimumRole = this.reflector.get(RequiresRole, context.getHandler());
-
-    if (!isDefined(minimumRole)) {
-      return true;
     }
 
     const userRole = user.role;

@@ -26,8 +26,8 @@ export class UsersService {
     return user;
   }
 
-  findByEmail(email: string) {
-    const user = this.prismaService.user.findUnique({ where: { email } });
+  async findByEmail(email: string) {
+    const user = await this.prismaService.user.findUnique({ where: { email } });
 
     if (!isDefined(user)) {
       throw new NotFoundException(`User ${email} not found`);
@@ -36,8 +36,10 @@ export class UsersService {
     return user;
   }
 
-  findByNickname(nickname: string) {
-    const user = this.prismaService.user.findUnique({ where: { nickname } });
+  async findByNickname(nickname: string) {
+    const user = await this.prismaService.user.findUnique({
+      where: { nickname },
+    });
 
     if (!isDefined(user)) {
       throw new NotFoundException(`User ${nickname} not found`);
@@ -46,9 +48,9 @@ export class UsersService {
     return user;
   }
 
-  create(createUserDto: CreateUserDto) {
+  async create(createUserDto: CreateUserDto) {
     try {
-      return this.prismaService.user.create({
+      return await this.prismaService.user.create({
         data: {
           ...createUserDto,
           role: 'User',
@@ -64,7 +66,7 @@ export class UsersService {
   async update(id: string, data: UpdateUserDto) {
     await this.findOne(id);
     try {
-      return this.prismaService.user.update({ where: { id }, data });
+      return await this.prismaService.user.update({ where: { id }, data });
     } catch {
       throw new InternalServerErrorException(`Failed to update user: ${id}`);
     }
@@ -73,7 +75,7 @@ export class UsersService {
   async delete(id: string) {
     await this.findOne(id);
     try {
-      return this.prismaService.user.delete({ where: { id } });
+      return await this.prismaService.user.delete({ where: { id } });
     } catch {
       throw new InternalServerErrorException(`Failed to delete user: ${id}`);
     }

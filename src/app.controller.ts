@@ -1,9 +1,9 @@
 import { Controller, Get, UseInterceptors } from '@nestjs/common';
 import { AppService } from './app.service';
-import { TransformInterceptor } from './transform.interceptor';
+import { LoggingInterceptor } from './logging.interceptor';
 
 @Controller()
-@UseInterceptors(TransformInterceptor)
+@UseInterceptors(LoggingInterceptor)
 export class AppController {
   constructor(private readonly appService: AppService) {}
 

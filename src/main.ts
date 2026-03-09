@@ -2,6 +2,7 @@ import { NestFactory } from '@nestjs/core';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
+import { ValidationPipe } from '@nestjs/common';
 
 const PORT = process.env.PORT ?? 3000;
 const SWAGGER_ROUTE = 'api';
@@ -12,6 +13,14 @@ async function bootstrap() {
   const config = new DocumentBuilder().build();
 
   app.use(cookieParser());
+
+  app.useGlobalPipes(
+    new ValidationPipe({
+      whitelist: true,
+      forbidNonWhitelisted: true,
+      transform: true,
+    }),
+  );
 
   const documentFactory = () => SwaggerModule.createDocument(app, config);
   SwaggerModule.setup(SWAGGER_ROUTE, app, documentFactory);

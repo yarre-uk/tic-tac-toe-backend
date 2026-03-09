@@ -8,7 +8,7 @@ import { Request } from 'express';
 import { Observable } from 'rxjs';
 import { isDefined } from '../utils';
 import { JwtService } from '@nestjs/jwt';
-import { JwtAccessTokenPayload } from '@/auth/auth.service';
+import { UserPayload } from '@/auth/auth.service';
 import { Reflector } from '@nestjs/core';
 
 export const IsPublic = Reflector.createDecorator<boolean>();
@@ -40,8 +40,7 @@ export class JwtAuthGuard implements CanActivate {
     }
 
     try {
-      const payload =
-        this.jwtService.verify<JwtAccessTokenPayload>(accessToken);
+      const payload = this.jwtService.verify<UserPayload>(accessToken);
       request['user'] = payload;
     } catch {
       throw new UnauthorizedException('Provided token is invalid!');

@@ -4,7 +4,6 @@ import {
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
-import { Request } from 'express';
 import { map, Observable } from 'rxjs';
 
 export interface Response<T> {
@@ -21,7 +20,7 @@ export class TransformInterceptor<T> implements NestInterceptor<
       map((data: T) => ({
         success: true,
         data: data,
-        timestamp: Date.now(),
+        timestamp: new Date().toISOString(),
       })),
     );
   }

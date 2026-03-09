@@ -8,7 +8,7 @@ import { Observable } from 'rxjs';
 import { Reflector } from '@nestjs/core';
 import { isDefined } from '../utils';
 import { Role } from '@/generated/prisma/enums';
-import { JwtAccessTokenPayload } from '@/auth/auth.service';
+import { UserPayload } from '@/auth/auth.service';
 
 const RolePriorities = {
   Admin: 3,
@@ -35,7 +35,7 @@ export class RolesGuard implements CanActivate {
     }
 
     const request = context.switchToHttp().getRequest<Request>();
-    const user = request['user'] as JwtAccessTokenPayload;
+    const user = request['user'] as UserPayload;
 
     if (!isDefined(user)) {
       throw new InternalServerErrorException(

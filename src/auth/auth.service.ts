@@ -16,12 +16,12 @@ interface TokensResponse {
   refreshToken: string;
 }
 
-export interface JwtAccessTokenPayload {
+export interface UserPayload {
   sub: string;
   role: Role;
 }
 
-export interface JwtRefreshTokenPayload {
+export interface RefreshTokenPayload {
   sub: string;
   jti: string;
 }
@@ -55,7 +55,7 @@ export class AuthService {
     const accessPayload = {
       sub: userId,
       role,
-    } satisfies JwtAccessTokenPayload;
+    } satisfies UserPayload;
     const accessToken = this.jwtService.sign(accessPayload, {
       expiresIn: this.accessTokenTtl,
     });
@@ -64,7 +64,7 @@ export class AuthService {
     const refreshPayload = {
       sub: userId,
       jti: refreshId,
-    } satisfies JwtRefreshTokenPayload;
+    } satisfies RefreshTokenPayload;
 
     const refreshToken = this.jwtService.sign(refreshPayload, {
       expiresIn: this.refreshTokenTtl,
@@ -108,10 +108,10 @@ export class AuthService {
   }
 
   async logOut(refreshToken: string): Promise<void> {
-    let payload: JwtRefreshTokenPayload;
+    let payload: RefreshTokenPayload;
 
     try {
-      payload = this.jwtService.verify<JwtRefreshTokenPayload>(refreshToken);
+      payload = this.jwtService.verify<RefreshTokenPayload>(refreshToken);
     } catch {
       throw new UnauthorizedException('Provided token is invalid!');
     }
@@ -135,10 +135,10 @@ export class AuthService {
   }
 
   async refresh(refreshToken: string) {
-    let payload: JwtRefreshTokenPayload;
+    let payload: RefreshTokenPayload;
 
     try {
-      payload = this.jwtService.verify<JwtRefreshTokenPayload>(refreshToken);
+      payload = this.jwtService.verify<RefreshTokenPayload>(refreshToken);
     } catch {
       throw new UnauthorizedException('Provided token is invalid!');
     }

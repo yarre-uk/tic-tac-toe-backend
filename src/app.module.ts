@@ -5,26 +5,24 @@ import { PrismaService } from './services/prisma.client';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
-import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './exceptions/exception.filter';
+import { ApiConfigModule } from './libs/config/config.module';
+import { ApiConfigService } from './libs/config/config.service';
 
 @Module({
   imports: [
     UsersModule,
     AuthModule,
-    ConfigModule.forRoot({
-      isGlobal: true,
-      envFilePath: '.env',
-    }),
+    ApiConfigModule.register(),
     JwtModule.registerAsync({
       global: true,
-      inject: [ConfigService],
-      useFactory(configService: ConfigService) {
+      inject: [ApiConfigService],
+      useFactory(configService: ApiConfigService) {
         return {
           secret: configService.get('JWT_SECRET'),
         };

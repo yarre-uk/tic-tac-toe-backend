@@ -10,10 +10,10 @@ import { AuthService } from './auth.service';
 import { SignInDto as SignInDto } from './dtos/sign-in.dto';
 import { SignUpDto as SignUpDto } from './dtos/sign-up.dto';
 import type { Request, Response } from 'express';
-import { ConfigService } from '@nestjs/config';
 import { isDefined } from '@/utils';
 import { ChangePasswordDto } from './dtos/change-password.dtp';
 import { IsPublic } from '@/guards/auth.guard';
+import { ApiConfigService } from '@/libs/config/config.service';
 
 export const REFRESH_TOKEN_KEY = 'refreshToken';
 
@@ -21,13 +21,12 @@ export const REFRESH_TOKEN_KEY = 'refreshToken';
 export class AuthController {
   constructor(
     private readonly authService: AuthService,
-    private readonly configService: ConfigService,
+    private readonly configService: ApiConfigService,
   ) {}
 
   private setRefreshTokenCookie(response: Response, refreshToken: string) {
     response.cookie(REFRESH_TOKEN_KEY, refreshToken, {
-      maxAge:
-        +this.configService.getOrThrow<number>('REFRESH_TOKEN_TTL') * 1000,
+      maxAge: this.configService.get('REFRESH_TOKEN_TTL') * 1000,
       secure: true,
       httpOnly: true,
       sameSite: 'strict',

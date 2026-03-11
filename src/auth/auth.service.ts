@@ -7,9 +7,9 @@ import { UsersService } from '@/users/users.service';
 import { isDefined } from '@/utils';
 import { v7 as uuidv7 } from 'uuid';
 import { PrismaService } from '@/services/prisma.client';
-import { ConfigService } from '@nestjs/config';
 import { hash, compare } from 'bcrypt';
 import { ChangePasswordDto } from './dtos/change-password.dtp';
+import { ApiConfigService } from '@/libs/config/config.service';
 
 interface TokensResponse {
   accessToken: string;
@@ -39,13 +39,11 @@ export class AuthService {
     private readonly jwtService: JwtService,
     private readonly usersService: UsersService,
     private readonly prismaService: PrismaService,
-    private readonly configService: ConfigService,
+    private readonly configService: ApiConfigService,
   ) {
-    this.accessTokenTtl =
-      +this.configService.getOrThrow<number>('ACCESS_TOKEN_TTL');
-    this.refreshTokenTtl =
-      +this.configService.getOrThrow<number>('REFRESH_TOKEN_TTL');
-    this.bcryptRounds = +this.configService.get<number>('BCRYPT_ROUNDS', 10);
+    this.accessTokenTtl = +this.configService.get('ACCESS_TOKEN_TTL');
+    this.refreshTokenTtl = +this.configService.get('REFRESH_TOKEN_TTL');
+    this.bcryptRounds = this.configService.get('BCRYPT_ROUNDS');
   }
 
   private async _createTokens(

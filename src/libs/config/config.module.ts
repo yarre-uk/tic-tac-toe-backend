@@ -1,7 +1,7 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { ApiConfigService } from './config.service';
-import { EnvironmentValidationSchema } from './config.schema';
+import { EnvSchema } from './config.schema';
 
 @Module({})
 export class ApiConfigModule {
@@ -13,7 +13,7 @@ export class ApiConfigModule {
         ConfigModule.forRoot({
           envFilePath: '.env',
           isGlobal: true,
-          validate: (envs) => EnvironmentValidationSchema.parse(envs),
+          validate: (envs) => EnvSchema.parse(envs),
         }),
       ],
       exports: [ApiConfigService],

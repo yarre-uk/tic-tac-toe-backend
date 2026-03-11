@@ -13,7 +13,7 @@ import type { Request, Response } from 'express';
 import { isDefined } from '@/utils';
 import { ChangePasswordDto } from './dtos/change-password.dtp';
 import { IsPublic } from '@/guards/auth.guard';
-import { ApiConfigService } from '@/libs/config/config.service';
+import { ApiConfigService } from '@/libs';
 
 export const REFRESH_TOKEN_KEY = 'refreshToken';
 

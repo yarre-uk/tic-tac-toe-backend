@@ -6,10 +6,9 @@ import { JwtService } from '@nestjs/jwt';
 import { UsersService } from '@/users/users.service';
 import { isDefined } from '@/utils';
 import { v7 as uuidv7 } from 'uuid';
-import { PrismaService } from '@/services/prisma.client';
 import { hash, compare } from 'bcrypt';
 import { ChangePasswordDto } from './dtos/change-password.dtp';
-import { ApiConfigService } from '@/libs/config/config.service';
+import { ApiConfigService, PrismaService } from '@/libs';
 
 interface TokensResponse {
   accessToken: string;

@@ -3,10 +3,10 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { PrismaService } from '@/services/prisma.client';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
 import { isDefined } from '@/utils';
+import { PrismaService } from '@/libs';
 
 @Injectable()
 export class UsersService {

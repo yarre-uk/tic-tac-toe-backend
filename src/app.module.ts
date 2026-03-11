@@ -1,7 +1,6 @@
 import { Module } from '@nestjs/common';
 import { AppController } from './app.controller';
 import { AppService } from './app.service';
-import { PrismaService } from './services/prisma.client';
 import { UsersModule } from './users/users.module';
 import { AuthModule } from './auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
@@ -11,8 +10,7 @@ import { RolesGuard } from './guards/roles.guard';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './exceptions/exception.filter';
-import { ApiConfigModule } from './libs/config/config.module';
-import { ApiConfigService } from './libs/config/config.service';
+import { ApiConfigModule, ApiConfigService, PrismaService } from './libs';
 
 @Module({
   imports: [

@@ -10,13 +10,22 @@ import { RolesGuard } from './guards/roles.guard';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { HttpExceptionFilter } from './exceptions/exception.filter';
-import { ApiConfigModule, ApiConfigService, PrismaService } from './libs';
+import { ApiConfigModule, ApiConfigService, PrismaModule } from './libs';
 
 @Module({
   imports: [
     UsersModule,
     AuthModule,
-    ApiConfigModule.register(),
+    ApiConfigModule.register({ envFilePath: '.env' }),
+    PrismaModule.registerAsync({
+      global: true,
+      inject: [ApiConfigService],
+      useFactory(configService: ApiConfigService) {
+        return {
+          dbUrl: configService.get('DATABASE_URL'),
+        };
+      },
+    }),
     JwtModule.registerAsync({
       global: true,
       inject: [ApiConfigService],
@@ -30,7 +39,6 @@ import { ApiConfigModule, ApiConfigService, PrismaService } from './libs';
   controllers: [AppController],
   providers: [
     AppService,
-    PrismaService,
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

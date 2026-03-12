@@ -1,4 +1,5 @@
 import {
+  Inject,
   Injectable,
   Logger,
   OnModuleDestroy,
@@ -6,8 +7,9 @@ import {
 } from '@nestjs/common';
 import { PrismaClient } from '../../generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { ApiConfigService } from '../config';
 import { delay } from '@/utils';
+import { PRISMA_OPTIONS_KEY } from './prisma.module';
+import type { PrismaModuleOptions } from './prisma.module';
 
 @Injectable()
 export class PrismaService
@@ -16,9 +18,9 @@ export class PrismaService
 {
   private readonly logger = new Logger('DB');
 
-  constructor(configService: ApiConfigService) {
+  constructor(@Inject(PRISMA_OPTIONS_KEY) options: PrismaModuleOptions) {
     const adapter = new PrismaPg({
-      connectionString: configService.get('DATABASE_URL'),
+      connectionString: options.dbUrl,
     });
 
     super({ adapter });

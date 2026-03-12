@@ -1,23 +1,20 @@
-import {
-  Injectable,
-  InternalServerErrorException,
-  NotFoundException,
-} from '@nestjs/common';
+import { Injectable, NotFoundException } from '@nestjs/common';
+import { Role } from '@/generated/prisma/enums';
+import { isDefined } from '@/utils';
+import { UserRepository } from '@/repositories/user/user.repository';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
-import { isDefined } from '@/utils';
-import { PrismaService } from '@/libs';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly prismaService: PrismaService) {}
+  constructor(private readonly userRepository: UserRepository) {}
 
   findAll() {
-    return this.prismaService.user.findMany();
+    return this.userRepository.findAll();
   }
 
   async findOne(id: string) {
-    const user = await this.prismaService.user.findUnique({ where: { id } });
+    const user = await this.userRepository.findById(id);
 
     if (!isDefined(user)) {
       throw new NotFoundException(`User ${id} not found`);
@@ -27,7 +24,7 @@ export class UsersService {
   }
 
   async findByEmail(email: string) {
-    const user = await this.prismaService.user.findUnique({ where: { email } });
+    const user = await this.userRepository.findByEmail(email);
 
     if (!isDefined(user)) {
       throw new NotFoundException(`User ${email} not found`);
@@ -37,9 +34,7 @@ export class UsersService {
   }
 
   async findByNickname(nickname: string) {
-    const user = await this.prismaService.user.findUnique({
-      where: { nickname },
-    });
+    const user = await this.userRepository.findByNickname(nickname);
 
     if (!isDefined(user)) {
       throw new NotFoundException(`User ${nickname} not found`);
@@ -48,36 +43,17 @@ export class UsersService {
     return user;
   }
 
-  async create(createUserDto: CreateUserDto) {
-    try {
-      return await this.prismaService.user.create({
-        data: {
-          ...createUserDto,
-          role: 'User',
-        },
-      });
-    } catch {
-      throw new InternalServerErrorException(
-        `Failed to create a user: ${createUserDto.nickname}`,
-      );
-    }
+  create(createUserDto: CreateUserDto) {
+    return this.userRepository.create({ ...createUserDto, role: Role.User });
   }
 
   async update(id: string, data: UpdateUserDto) {
     await this.findOne(id);
-    try {
-      return await this.prismaService.user.update({ where: { id }, data });
-    } catch {
-      throw new InternalServerErrorException(`Failed to update user: ${id}`);
-    }
+    return this.userRepository.update(id, data);
   }
 
   async delete(id: string) {
     await this.findOne(id);
-    try {
-      return await this.prismaService.user.delete({ where: { id } });
-    } catch {
-      throw new InternalServerErrorException(`Failed to delete user: ${id}`);
-    }
+    return this.userRepository.delete(id);
   }
 }

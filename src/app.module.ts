@@ -9,7 +9,7 @@ import { JwtAuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
-import { HttpExceptionFilter } from './exceptions/exception.filter';
+import { GlobalExceptionFilter } from './exceptions/exception.filter';
 import { ApiConfigModule, ApiConfigService, PrismaModule } from './libs';
 
 @Module({
@@ -57,7 +57,7 @@ import { ApiConfigModule, ApiConfigService, PrismaModule } from './libs';
     },
     {
       provide: APP_FILTER,
-      useClass: HttpExceptionFilter,
+      useClass: GlobalExceptionFilter,
     },
   ],
 })

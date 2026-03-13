@@ -5,9 +5,12 @@ import { PrismaService } from '@/libs';
 import { CreateUserDto } from '@/users/dto/create-user.dto';
 import { UpdateUserDto } from '@/users/dto/update-user.dto';
 
+export type UserIdentifiers = Pick<User, 'nickname' | 'email'>;
+
 export interface IUserRepository {
   findById(id: string): Promise<User | null>;
   findAll(): Promise<User[]>;
+  findAllIdentifiers(): Promise<UserIdentifiers[]>;
   findByEmail(email: string): Promise<User | null>;
   findByNickname(nickname: string): Promise<User | null>;
   create(data: CreateUserDto & { role: Role }): Promise<User>;
@@ -27,6 +30,12 @@ export class UserRepository implements IUserRepository {
     return this.prisma.user.findMany();
   }
 
+  findAllIdentifiers() {
+    return this.prisma.user.findMany({
+      select: { nickname: true, email: true },
+    });
+  }
+
   findByEmail(email: string) {
     return this.prisma.user.findUnique({ where: { email } });
   }
@@ -34,6 +43,16 @@ export class UserRepository implements IUserRepository {
   findByNickname(nickname: string) {
     return this.prisma.user.findUnique({ where: { nickname } });
   }
+
+  // async fetchEmails() {
+  //   return (
+  //     await this.prisma.user.findMany({
+  //       select: {
+  //         email: true,
+  //       },
+  //     })
+  //   ).flat(1);
+  // }
 
   create(data: CreateUserDto & { role: Role }) {
     return this.prisma.user.create({ data });

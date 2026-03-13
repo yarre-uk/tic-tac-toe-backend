@@ -1,7 +1,9 @@
 import {
   Body,
   Controller,
+  Get,
   Post,
+  Query,
   Req,
   Res,
   UnauthorizedException,
@@ -14,6 +16,7 @@ import { isDefined } from '@/utils';
 import { ChangePasswordDto } from './dtos/change-password.dtp';
 import { IsPublic } from '@/guards/auth.guard';
 import { ApiConfigService } from '@/libs';
+import { AvailabilityService } from '@/availability/availability.service';
 
 export const REFRESH_TOKEN_KEY = 'refreshToken';
 
@@ -22,6 +25,7 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ApiConfigService,
+    private readonly availabilityService: AvailabilityService,
   ) {}
 
   private setRefreshTokenCookie(response: Response, refreshToken: string) {
@@ -104,5 +108,17 @@ export class AuthController {
   @Post('change-password')
   async changePassword(@Body() dto: ChangePasswordDto) {
     return this.authService.changePassword(dto);
+  }
+
+  @IsPublic()
+  @Get('availability/nickname')
+  checkNickname(@Query('nickname') nickname: string) {
+    return { available: !this.availabilityService.hasNickname(nickname) };
+  }
+
+  @IsPublic()
+  @Get('availability/email')
+  checkEmail(@Query('email') email: string) {
+    return { available: !this.availabilityService.hasEmail(email) };
   }
 }

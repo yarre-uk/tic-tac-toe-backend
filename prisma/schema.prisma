@@ -37,7 +37,7 @@ model RefreshToken {
   isActive  Boolean  @default(true)
 
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isActive])
 }

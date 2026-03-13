@@ -1,0 +1,11 @@
+meta {
+  name: Check Email Availability
+  type: http
+  seq: 7
+}
+
+get {
+  url: {{baseUrl}}/auth/availability/email?email=test@example.com
+  body: none
+  auth: none
+}

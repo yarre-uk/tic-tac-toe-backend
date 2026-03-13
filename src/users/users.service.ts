@@ -4,10 +4,14 @@ import { isDefined } from '@/utils';
 import { UserRepository } from '@/repositories/user/user.repository';
 import { UpdateUserDto } from './dto/update-user.dto';
 import { CreateUserDto } from './dto/create-user.dto';
+import { AvailabilityService } from '@/availability/availability.service';
 
 @Injectable()
 export class UsersService {
-  constructor(private readonly userRepository: UserRepository) {}
+  constructor(
+    private readonly userRepository: UserRepository,
+    private readonly availabilityService: AvailabilityService,
+  ) {}
 
   findAll() {
     return this.userRepository.findAll();
@@ -43,8 +47,16 @@ export class UsersService {
     return user;
   }
 
-  create(createUserDto: CreateUserDto) {
-    return this.userRepository.create({ ...createUserDto, role: Role.User });
+  async create(createUserDto: CreateUserDto) {
+    const user = await this.userRepository.create({
+      ...createUserDto,
+      role: Role.User,
+    });
+
+    this.availabilityService.addNickname(user.nickname);
+    if (user.email) this.availabilityService.addEmail(user.email);
+
+    return user;
   }
 
   async update(id: string, data: UpdateUserDto) {

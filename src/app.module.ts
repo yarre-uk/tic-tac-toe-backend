@@ -11,11 +11,13 @@ import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { GlobalExceptionFilter } from './exceptions/exception.filter';
 import { ApiConfigModule, ApiConfigService, PrismaModule } from './libs';
+import { ScheduleModule } from '@nestjs/schedule';
 
 @Module({
   imports: [
     UsersModule,
     AuthModule,
+    ScheduleModule.forRoot(),
     ApiConfigModule.register({ envFilePath: '.env' }),
     PrismaModule.registerAsync({
       global: true,

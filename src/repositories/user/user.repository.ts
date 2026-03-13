@@ -2,8 +2,7 @@ import { Injectable } from '@nestjs/common';
 import { User } from '@/generated/prisma/client';
 import { Role } from '@/generated/prisma/enums';
 import { PrismaService } from '@/libs';
-import { CreateUserDto } from '@/users/dto/create-user.dto';
-import { UpdateUserDto } from '@/users/dto/update-user.dto';
+import { CreateUserDto, UpdateUserDto } from '@/modules';
 
 export type UserIdentifiers = Pick<User, 'nickname' | 'email'>;
 

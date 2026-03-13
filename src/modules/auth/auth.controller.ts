@@ -9,14 +9,12 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { AuthService } from './auth.service';
-import { SignInDto as SignInDto } from './dtos/sign-in.dto';
-import { SignUpDto as SignUpDto } from './dtos/sign-up.dto';
 import type { Request, Response } from 'express';
 import { isDefined } from '@/utils';
-import { ChangePasswordDto } from './dtos/change-password.dtp';
-import { IsPublic } from '@/guards/auth.guard';
 import { ApiConfigService } from '@/libs';
-import { AvailabilityService } from '@/availability/availability.service';
+import { AvailabilityService } from '../availability';
+import { ChangePasswordDto, SignInDto, SignUpDto } from './dtos';
+import { IsPublic } from '@/guards';
 
 export const REFRESH_TOKEN_KEY = 'refreshToken';
 

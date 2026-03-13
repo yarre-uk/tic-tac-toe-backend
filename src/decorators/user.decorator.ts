@@ -1,4 +1,4 @@
-import { UserPayload } from '@/auth/auth.service';
+import { UserPayload } from '@/modules/auth/auth.service';
 import { createParamDecorator, ExecutionContext } from '@nestjs/common';
 import { Response } from 'express';
 

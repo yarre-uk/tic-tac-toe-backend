@@ -1,14 +1,11 @@
 import * as path from 'path';
 import { Worker } from 'worker_threads';
 import { ApiConfigService } from '@/libs';
-import {
-  UserIdentifiers,
-  UserRepository,
-} from '@/repositories/user/user.repository';
 import { Injectable, OnModuleInit } from '@nestjs/common';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { BloomFilter } from 'bloom-filters';
 import { WorkerInput, WorkerResult } from '@/workers/bloom-filter.worker';
+import { UserIdentifiers, UserRepository } from '@/repositories';
 
 @Injectable()
 export class AvailabilityService implements OnModuleInit {
@@ -40,7 +37,7 @@ export class AvailabilityService implements OnModuleInit {
     const ext = __filename.endsWith('.ts') ? '.ts' : '.js';
     const workerPath = path.resolve(
       __dirname,
-      '../workers',
+      '../../workers',
       `bloom-filter.worker${ext}`,
     );
 

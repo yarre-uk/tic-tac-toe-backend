@@ -1,14 +1,12 @@
 import { Injectable, UnauthorizedException } from '@nestjs/common';
-import { SignInDto } from './dtos/sign-in.dto';
-import { SignUpDto } from './dtos/sign-up.dto';
 import { Role } from '@/generated/prisma/enums';
 import { JwtService } from '@nestjs/jwt';
-import { UsersService } from '@/users/users.service';
 import { isDefined } from '@/utils';
 import { v7 as uuidv7 } from 'uuid';
 import { hash, compare } from 'bcrypt';
-import { ChangePasswordDto } from './dtos/change-password.dtp';
 import { ApiConfigService, PrismaService } from '@/libs';
+import { UsersService } from '../users';
+import { SignInDto, SignUpDto, ChangePasswordDto } from './dtos';
 
 interface TokensResponse {
   accessToken: string;

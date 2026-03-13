@@ -8,7 +8,7 @@ import { Request } from 'express';
 import { Observable } from 'rxjs';
 import { isDefined } from '../utils';
 import { JwtService } from '@nestjs/jwt';
-import { UserPayload } from '@/auth/auth.service';
+import { UserPayload } from '@/modules/auth/auth.service';
 import { Reflector } from '@nestjs/core';
 
 export const IsPublic = Reflector.createDecorator<boolean>();

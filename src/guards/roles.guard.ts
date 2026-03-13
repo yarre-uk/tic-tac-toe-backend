@@ -8,7 +8,7 @@ import { Observable } from 'rxjs';
 import { Reflector } from '@nestjs/core';
 import { isDefined } from '../utils';
 import { Role } from '@/generated/prisma/enums';
-import { UserPayload } from '@/auth/auth.service';
+import { UserPayload } from '@/modules/auth/auth.service';
 
 const RolePriorities = {
   Admin: 3,

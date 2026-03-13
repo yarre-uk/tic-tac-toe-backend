@@ -1,10 +1,9 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { Role } from '@/generated/prisma/enums';
 import { isDefined } from '@/utils';
-import { UserRepository } from '@/repositories/user/user.repository';
-import { UpdateUserDto } from './dto/update-user.dto';
-import { CreateUserDto } from './dto/create-user.dto';
-import { AvailabilityService } from '@/availability/availability.service';
+import { UserRepository } from '@/repositories';
+import { AvailabilityService } from '../availability';
+import { CreateUserDto, UpdateUserDto } from './dto';
 
 @Injectable()
 export class UsersService {

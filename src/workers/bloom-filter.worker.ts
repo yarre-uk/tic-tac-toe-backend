@@ -1,6 +1,6 @@
 import { workerData, parentPort } from 'worker_threads';
 import { BloomFilter } from 'bloom-filters';
-import { UserIdentifiers } from '@/repositories/user/user.repository';
+import { UserIdentifiers } from '@/repositories';
 
 export interface WorkerInput {
   identifiers: UserIdentifiers[];

@@ -1,9 +1,7 @@
 import {
   Body,
   Controller,
-  Get,
   Post,
-  Query,
   Req,
   Res,
   UnauthorizedException,
@@ -12,7 +10,6 @@ import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
 import { isDefined } from '@/utils';
 import { ApiConfigService } from '@/libs';
-import { AvailabilityService } from '../availability';
 import { ChangePasswordDto, SignInDto, SignUpDto } from './dtos';
 import { IsPublic } from '@/guards';
 
@@ -23,7 +20,6 @@ export class AuthController {
   constructor(
     private readonly authService: AuthService,
     private readonly configService: ApiConfigService,
-    private readonly availabilityService: AvailabilityService,
   ) {}
 
   private setRefreshTokenCookie(response: Response, refreshToken: string) {
@@ -106,17 +102,5 @@ export class AuthController {
   @Post('change-password')
   async changePassword(@Body() dto: ChangePasswordDto) {
     return this.authService.changePassword(dto);
-  }
-
-  @IsPublic()
-  @Get('availability/nickname')
-  checkNickname(@Query('nickname') nickname: string) {
-    return { available: !this.availabilityService.hasNickname(nickname) };
-  }
-
-  @IsPublic()
-  @Get('availability/email')
-  checkEmail(@Query('email') email: string) {
-    return { available: !this.availabilityService.hasEmail(email) };
   }
 }

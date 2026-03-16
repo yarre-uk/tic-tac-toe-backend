@@ -1,0 +1,11 @@
+meta {
+  name: Check Nickname Availability
+  type: http
+  seq: 1
+}
+
+get {
+  url: {{baseUrl}}/availability/nickname?nickname=testuser
+  body: none
+  auth: none
+}

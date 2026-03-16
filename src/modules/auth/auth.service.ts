@@ -15,6 +15,7 @@ interface TokensResponse {
 
 export interface UserPayload {
   sub: string;
+  jti: string;
   role: Role;
 }
 
@@ -47,9 +48,11 @@ export class AuthService {
     userId: string,
     role: Role,
   ): Promise<TokensResponse> {
+    const accessId = uuidv7();
     const accessPayload = {
       sub: userId,
       role,
+      jti: accessId,
     } satisfies UserPayload;
     const accessToken = this.jwtService.sign(accessPayload, {
       expiresIn: this.accessTokenTtl,

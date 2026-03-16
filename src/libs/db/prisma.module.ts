@@ -12,10 +12,10 @@ export interface PrismaModuleOptions {
 interface PrismaModuleAsyncOptions {
   global?: boolean;
   inject?: any[];
+  imports?: any[];
   useFactory: (
     ...args: any[]
   ) => PrismaModuleOptions | Promise<PrismaModuleOptions>;
-  imports?: any[];
 }
 
 @Module({})

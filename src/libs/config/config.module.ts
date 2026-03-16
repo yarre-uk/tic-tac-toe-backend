@@ -4,14 +4,18 @@ import { ApiConfigService } from './config.service';
 import { EnvSchema } from './config.schema';
 
 interface ApiConfigModuleOptions {
+  global: boolean;
   envFilePath: string;
 }
 
 @Module({})
 export class ApiConfigModule {
-  static register({ envFilePath }: ApiConfigModuleOptions): DynamicModule {
+  static register({
+    global,
+    envFilePath,
+  }: ApiConfigModuleOptions): DynamicModule {
     return {
-      global: true,
+      global,
       module: ApiConfigModule,
       imports: [
         ConfigModule.forRoot({

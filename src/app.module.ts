@@ -10,13 +10,14 @@ import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { GlobalExceptionFilter } from './exceptions/exception.filter';
 import { ApiConfigModule, ApiConfigService, PrismaModule } from './libs';
 import { ScheduleModule } from '@nestjs/schedule';
+import { RedisModule } from './libs/redis/redis.module';
 
 @Module({
   imports: [
     UsersModule,
     AuthModule,
     ScheduleModule.forRoot(),
-    ApiConfigModule.register({ envFilePath: '.env' }),
+    ApiConfigModule.register({ global: true, envFilePath: '.env' }),
     PrismaModule.registerAsync({
       global: true,
       inject: [ApiConfigService],
@@ -32,6 +33,17 @@ import { ScheduleModule } from '@nestjs/schedule';
       useFactory(configService: ApiConfigService) {
         return {
           secret: configService.get('JWT_SECRET'),
+        };
+      },
+    }),
+    RedisModule.registerAsync({
+      global: true,
+      inject: [ApiConfigService],
+      useFactory(configService: ApiConfigService) {
+        return {
+          host: configService.get('REDIS_HOST'),
+          password: configService.get('REDIS_PASSWORD'),
+          port: configService.get('REDIS_PORT'),
         };
       },
     }),

@@ -1,0 +1,19 @@
+meta {
+  name: Admin - Get User Sessions
+  type: http
+  seq: 4
+}
+
+get {
+  url: {{baseUrl}}/auth/sessions/admin/:userId
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+params:path {
+  userId: <user-id>
+}

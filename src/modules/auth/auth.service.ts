@@ -164,6 +164,40 @@ export class AuthService {
     return this._createTokens(stored.user.id, stored.user.role);
   }
 
+  getSessions(userId: string) {
+    return this.prismaService.refreshToken.findMany({
+      where: { userId },
+      select: { id: true, expiresAt: true, createdAt: true, isActive: true },
+      orderBy: { createdAt: 'desc' },
+    });
+  }
+
+  async revokeSession(sessionId: string, userId: string) {
+    const session = await this.prismaService.refreshToken.findUnique({
+      where: { id: sessionId },
+    });
+
+    if (!isDefined(session) || session.userId !== userId) {
+      throw new UnauthorizedException('Session not found');
+    }
+
+    await this.prismaService.refreshToken.update({
+      where: { id: sessionId },
+      data: { isActive: false },
+    });
+  }
+
+  async revokeAllSessions(userId: string, exceptJti?: string) {
+    await this.prismaService.refreshToken.updateMany({
+      where: {
+        userId,
+        isActive: true,
+        ...(exceptJti ? { id: { not: exceptJti } } : {}),
+      },
+      data: { isActive: false },
+    });
+  }
+
   async changePassword(dto: ChangePasswordDto) {
     const user = await this.usersService.findByNickname(dto.nickname);
 

@@ -1,0 +1,15 @@
+meta {
+  name: Revoke All Sessions
+  type: http
+  seq: 3
+}
+
+delete {
+  url: {{baseUrl}}/auth/sessions
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

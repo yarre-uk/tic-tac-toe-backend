@@ -6,15 +6,29 @@ import {
   Res,
   UnauthorizedException,
 } from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiCookieAuth,
+  ApiNoContentResponse,
+  ApiOkResponse,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
 import { isDefined } from '@/utils';
 import { ApiConfigService } from '@/libs';
-import { ChangePasswordDto, SignInDto, SignUpDto } from './dtos';
+import {
+  ChangePasswordDto,
+  SignInDto,
+  SignUpDto,
+  TokenResponseDto,
+} from './dtos';
 import { IsPublic } from '@/guards';
 
 export const REFRESH_TOKEN_KEY = 'refreshToken';
 
+@ApiTags('Auth')
 @Controller('auth')
 export class AuthController {
   constructor(
@@ -31,32 +45,48 @@ export class AuthController {
     });
   }
 
+  @ApiOperation({ summary: 'Sign in and receive tokens' })
+  @ApiOkResponse({ type: TokenResponseDto })
   @IsPublic()
   @Post('sign-in')
   async signIn(
     @Res({ passthrough: true }) response: Response,
     @Body() dto: SignInDto,
   ) {
-    const { accessToken, refreshToken } = await this.authService.signIn(dto);
+    const {
+      accessToken,
+      refreshToken,
+    }: { accessToken: string; refreshToken: string } =
+      await this.authService.signIn(dto);
 
     this.setRefreshTokenCookie(response, refreshToken);
 
     return { accessToken };
   }
 
+  @ApiOperation({ summary: 'Register a new account' })
+  @ApiOkResponse({ type: TokenResponseDto })
   @IsPublic()
   @Post('sign-up')
   async signUp(
     @Res({ passthrough: true }) response: Response,
     @Body() dto: SignUpDto,
   ) {
-    const { accessToken, refreshToken } = await this.authService.signUp(dto);
+    const {
+      accessToken,
+      refreshToken,
+    }: { accessToken: string; refreshToken: string } =
+      await this.authService.signUp(dto);
 
     this.setRefreshTokenCookie(response, refreshToken);
 
     return { accessToken };
   }
 
+  @ApiOperation({ summary: 'Log out and revoke the current session' })
+  @ApiNoContentResponse()
+  @ApiBearerAuth()
+  @ApiCookieAuth(REFRESH_TOKEN_KEY)
   @Post('logout')
   async logOut(
     @Res({ passthrough: true }) response: Response,
@@ -77,6 +107,9 @@ export class AuthController {
     return { message: 'Logged out successfully' };
   }
 
+  @ApiOperation({ summary: 'Refresh access token using refresh token cookie' })
+  @ApiOkResponse({ type: TokenResponseDto })
+  @ApiCookieAuth(REFRESH_TOKEN_KEY)
   @IsPublic()
   @Post('refresh')
   async refresh(
@@ -91,7 +124,10 @@ export class AuthController {
       throw new UnauthorizedException('No refresh token provided');
     }
 
-    const { accessToken, refreshToken: newRefreshToken } =
+    const {
+      accessToken,
+      refreshToken: newRefreshToken,
+    }: { accessToken: string; refreshToken: string } =
       await this.authService.refresh(refreshToken);
 
     this.setRefreshTokenCookie(response, newRefreshToken);
@@ -99,6 +135,9 @@ export class AuthController {
     return { accessToken };
   }
 
+  @ApiOperation({ summary: 'Change password and revoke all sessions' })
+  @ApiNoContentResponse()
+  @ApiBearerAuth()
   @Post('change-password')
   async changePassword(@Body() dto: ChangePasswordDto) {
     return this.authService.changePassword(dto);

@@ -10,7 +10,12 @@ const SWAGGER_ROUTE = 'api';
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
 
-  const config = new DocumentBuilder().build();
+  const config = new DocumentBuilder()
+    .setTitle('Tic Tac Toe API')
+    .setDescription('Backend API for the tic-tac-toe application')
+    .setVersion('1.0')
+    .addBearerAuth()
+    .build();
 
   app.use(cookieParser());
 

@@ -1,6 +1,7 @@
+/* eslint-disable @typescript-eslint/no-unsafe-argument */
 /* eslint-disable @typescript-eslint/no-explicit-any */
 
-import { DynamicModule, Module } from '@nestjs/common';
+import { DynamicModule, Inject, Module, OnModuleDestroy } from '@nestjs/common';
 import Redis from 'ioredis';
 
 interface RedisModuleOptions {
@@ -22,8 +23,19 @@ interface RedisModuleAsyncOptions {
 export const REDIS_CLIENT_KEY = 'REDIS_CLIENT_KEY';
 
 @Module({})
-export class RedisModule {
-  static register({ global, host, port }: RedisModuleOptions): DynamicModule {
+export class RedisModule implements OnModuleDestroy {
+  constructor(@Inject(REDIS_CLIENT_KEY) private readonly redis: Redis) {}
+
+  async onModuleDestroy() {
+    await this.redis.quit();
+  }
+
+  static register({
+    global,
+    host,
+    port,
+    password,
+  }: RedisModuleOptions): DynamicModule {
     return {
       global,
       module: RedisModule,
@@ -33,6 +45,7 @@ export class RedisModule {
           provide: REDIS_CLIENT_KEY,
           useValue: new Redis({
             host,
+            password,
             port,
           }),
         },
@@ -50,8 +63,8 @@ export class RedisModule {
         {
           provide: REDIS_CLIENT_KEY,
           inject: params.inject ?? [],
-          useFactory: async (args: any[]) => {
-            const { host, port, password } = await params.useFactory(args);
+          useFactory: async (...args: any[]) => {
+            const { host, port, password } = await params.useFactory(...args);
 
             return new Redis({
               host,

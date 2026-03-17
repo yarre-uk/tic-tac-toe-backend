@@ -48,6 +48,7 @@ export class PrismaService
 
     this.logger.log('Successfully connected to DB');
   }
+
   onModuleDestroy() {
     return this.$disconnect();
   }

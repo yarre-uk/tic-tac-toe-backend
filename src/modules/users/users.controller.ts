@@ -1,6 +1,6 @@
 import { Body, Controller, Get, Patch } from '@nestjs/common';
 import { UsersService } from './users.service';
-import { UpdateUserDto } from './dto';
+import { UpdateUserDto, UserLike, UserResponseDto } from './dto';
 import type { UserPayload } from '../auth';
 import { User } from '@/decorators';
 
@@ -9,12 +9,14 @@ export class UsersController {
   constructor(private readonly usersService: UsersService) {}
 
   @Get('profile')
-  getProfile(@User() user: UserPayload) {
-    return this.usersService.findOne(user.sub);
+  async getProfile(@User() user: UserPayload) {
+    const found: UserLike = await this.usersService.findOne(user.sub);
+    return UserResponseDto.from(found);
   }
 
   @Patch('profile')
-  updateProfile(@User() user: UserPayload, @Body() dto: UpdateUserDto) {
-    return this.usersService.update(user.sub, dto);
+  async updateProfile(@User() user: UserPayload, @Body() dto: UpdateUserDto) {
+    const updated: UserLike = await this.usersService.update(user.sub, dto);
+    return UserResponseDto.from(updated);
   }
 }

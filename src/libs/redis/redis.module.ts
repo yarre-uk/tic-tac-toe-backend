@@ -19,7 +19,7 @@ interface RedisModuleAsyncOptions {
   ) => RedisModuleOptions | Promise<RedisModuleOptions>;
 }
 
-const REDIS_CLIENT_KEY = 'REDIS_CLIENT_KEY';
+export const REDIS_CLIENT_KEY = 'REDIS_CLIENT_KEY';
 
 @Module({})
 export class RedisModule {
@@ -45,6 +45,7 @@ export class RedisModule {
       global: params.global,
       module: RedisModule,
       imports: params.imports ?? [],
+      exports: [REDIS_CLIENT_KEY],
       providers: [
         {
           provide: REDIS_CLIENT_KEY,

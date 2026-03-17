@@ -31,10 +31,11 @@ model User {
 }
 
 model RefreshToken {
-  id        String   @id
-  expiresAt DateTime
-  createdAt DateTime @default(now())
-  isActive  Boolean  @default(true)
+  id             String   @id
+  accessTokenJti String
+  expiresAt      DateTime
+  createdAt      DateTime @default(now())
+  isActive       Boolean  @default(true)
 
   userId String
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)

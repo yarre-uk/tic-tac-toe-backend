@@ -1,10 +1,12 @@
-import { Injectable, UnauthorizedException } from '@nestjs/common';
+import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
 import { Role } from '@/generated/prisma/enums';
 import { JwtService } from '@nestjs/jwt';
 import { isDefined } from '@/utils';
 import { v7 as uuidv7 } from 'uuid';
 import { hash, compare } from 'bcrypt';
+import Redis from 'ioredis';
 import { ApiConfigService, PrismaService } from '@/libs';
+import { REDIS_CLIENT_KEY } from '@/libs/redis/redis.module';
 import { UsersService } from '../users';
 import { SignInDto, SignUpDto, ChangePasswordDto } from './dtos';
 
@@ -38,6 +40,7 @@ export class AuthService {
     private readonly usersService: UsersService,
     private readonly prismaService: PrismaService,
     private readonly configService: ApiConfigService,
+    @Inject(REDIS_CLIENT_KEY) private readonly redis: Redis,
   ) {
     this.accessTokenTtl = +this.configService.get('ACCESS_TOKEN_TTL');
     this.refreshTokenTtl = +this.configService.get('REFRESH_TOKEN_TTL');
@@ -71,12 +74,22 @@ export class AuthService {
     await this.prismaService.refreshToken.create({
       data: {
         id: refreshId,
+        accessTokenJti: accessId,
         expiresAt: new Date(Date.now() + this.refreshTokenTtl * 1000),
         userId: userId,
       },
     });
 
     return { accessToken, refreshToken };
+  }
+
+  private _accessTokenRemainingTtl(createdAt: Date): number {
+    return Math.max(
+      0,
+      Math.floor(
+        (createdAt.getTime() + this.accessTokenTtl * 1000 - Date.now()) / 1000,
+      ),
+    );
   }
 
   async signIn(dto: SignInDto): Promise<TokensResponse> {
@@ -130,6 +143,16 @@ export class AuthService {
       where: { id: payload.jti },
       data: { isActive: false },
     });
+
+    const ttl = this._accessTokenRemainingTtl(stored.createdAt);
+    if (ttl > 0) {
+      await this.redis.set(
+        `blocklist:${stored.accessTokenJti}`,
+        '1',
+        'EX',
+        ttl,
+      );
+    }
   }
 
   async refresh(refreshToken: string) {
@@ -185,17 +208,45 @@ export class AuthService {
       where: { id: sessionId },
       data: { isActive: false },
     });
+
+    const ttl = this._accessTokenRemainingTtl(session.createdAt);
+    if (ttl > 0) {
+      await this.redis.set(
+        `blacklist:${session.accessTokenJti}`,
+        '1',
+        'EX',
+        ttl,
+      );
+    }
   }
 
   async revokeAllSessions(userId: string, exceptJti?: string) {
-    await this.prismaService.refreshToken.updateMany({
+    const sessions = await this.prismaService.refreshToken.findMany({
       where: {
         userId,
         isActive: true,
         ...(exceptJti ? { id: { not: exceptJti } } : {}),
       },
+      select: { id: true, accessTokenJti: true, createdAt: true },
+    });
+
+    await this.prismaService.refreshToken.updateMany({
+      where: { id: { in: sessions.map((s) => s.id) } },
       data: { isActive: false },
     });
+
+    if (sessions.length > 0) {
+      const pipeline = this.redis.pipeline();
+
+      sessions.forEach((s) => {
+        const ttl = this._accessTokenRemainingTtl(s.createdAt);
+        if (ttl > 0) {
+          pipeline.set(`blacklist:${s.accessTokenJti}`, '1', 'EX', ttl);
+        }
+      });
+
+      await pipeline.exec();
+    }
   }
 
   async changePassword(dto: ChangePasswordDto) {

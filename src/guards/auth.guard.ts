@@ -2,13 +2,15 @@ import {
   Injectable,
   CanActivate,
   ExecutionContext,
+  Inject,
   UnauthorizedException,
 } from '@nestjs/common';
 import { Request } from 'express';
-import { Observable } from 'rxjs';
 import { isDefined } from '../utils';
 import { JwtService } from '@nestjs/jwt';
+import Redis from 'ioredis';
 import { UserPayload } from '@/modules/auth/auth.service';
+import { REDIS_CLIENT_KEY } from '@/libs/redis/redis.module';
 import { Reflector } from '@nestjs/core';
 
 export const IsPublic = Reflector.createDecorator<boolean>();
@@ -18,11 +20,10 @@ export class JwtAuthGuard implements CanActivate {
   constructor(
     private readonly jwtService: JwtService,
     private readonly reflector: Reflector,
+    @Inject(REDIS_CLIENT_KEY) private readonly redis: Redis,
   ) {}
 
-  canActivate(
-    context: ExecutionContext,
-  ): boolean | Promise<boolean> | Observable<boolean> {
+  async canActivate(context: ExecutionContext): Promise<boolean> {
     const isPublic = this.reflector.getAllAndOverride(IsPublic, [
       context.getHandler(),
       context.getClass(),
@@ -39,12 +40,21 @@ export class JwtAuthGuard implements CanActivate {
       throw new UnauthorizedException('No token provided!');
     }
 
+    let payload: UserPayload;
+
     try {
-      const payload = this.jwtService.verify<UserPayload>(accessToken);
-      request['user'] = payload;
+      payload = this.jwtService.verify<UserPayload>(accessToken);
     } catch {
       throw new UnauthorizedException('Provided token is invalid!');
     }
+
+    const isBlacklisted = await this.redis.exists(`blacklist:${payload.jti}`);
+
+    if (isBlacklisted) {
+      throw new UnauthorizedException('Token has been revoked!');
+    }
+
+    request['user'] = payload;
 
     return true;
   }

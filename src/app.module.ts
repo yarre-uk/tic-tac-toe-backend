@@ -14,8 +14,6 @@ import { RedisModule } from './libs/redis/redis.module';
 
 @Module({
   imports: [
-    UsersModule,
-    AuthModule,
     ScheduleModule.forRoot(),
     ApiConfigModule.register({ global: true, envFilePath: '.env' }),
     PrismaModule.registerAsync({
@@ -47,6 +45,8 @@ import { RedisModule } from './libs/redis/redis.module';
         };
       },
     }),
+    UsersModule,
+    AuthModule,
   ],
   providers: [
     {

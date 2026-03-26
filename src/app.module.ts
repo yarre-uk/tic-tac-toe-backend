@@ -8,9 +8,14 @@ import { RolesGuard } from './guards/roles.guard';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { GlobalExceptionFilter } from './exceptions/exception.filter';
-import { ApiConfigModule, ApiConfigService, PrismaModule } from './libs';
+import {
+  ApiConfigModule,
+  ApiConfigService,
+  EventsModule,
+  PrismaModule,
+  RedisModule,
+} from './libs';
 import { ScheduleModule } from '@nestjs/schedule';
-import { RedisModule } from './libs/redis/redis.module';
 
 @Module({
   imports: [
@@ -45,6 +50,7 @@ import { RedisModule } from './libs/redis/redis.module';
         };
       },
     }),
+    EventsModule,
     UsersModule,
     AuthModule,
   ],

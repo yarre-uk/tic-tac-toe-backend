@@ -2,14 +2,14 @@ import { Injectable, NotFoundException } from '@nestjs/common';
 import { Role } from '@/generated/prisma/enums';
 import { isDefined } from '@/utils';
 import { UserRepository } from '@/repositories';
-import { AvailabilityService } from '../availability';
+import { AppEvents, TypedEventEmitter } from '@/libs';
 import { CreateUserDto, UpdateUserDto } from './dto';
 
 @Injectable()
 export class UsersService {
   constructor(
     private readonly userRepository: UserRepository,
-    private readonly availabilityService: AvailabilityService,
+    private readonly eventEmitter: TypedEventEmitter,
   ) {}
 
   findAll() {
@@ -52,15 +52,28 @@ export class UsersService {
       role: Role.User,
     });
 
-    this.availabilityService.addNickname(user.nickname);
-    if (user.email) this.availabilityService.addEmail(user.email);
+    this.eventEmitter.emit(AppEvents.USER_CREATED, {
+      userId: user.id,
+      nickname: user.nickname,
+      email: user.email,
+      role: user.role,
+    });
 
     return user;
   }
 
   async update(id: string, data: UpdateUserDto) {
     await this.findOne(id);
-    return this.userRepository.update(id, data);
+    const user = await this.userRepository.update(id, data);
+
+    this.eventEmitter.emit(AppEvents.USER_UPDATED, {
+      userId: user.id,
+      nickname: user.nickname,
+      email: user.email,
+      role: user.role,
+    });
+
+    return user;
   }
 
   async delete(id: string) {

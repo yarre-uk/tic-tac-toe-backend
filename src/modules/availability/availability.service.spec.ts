@@ -5,6 +5,7 @@ import { AvailabilityService } from './availability.service';
 import { UserRepository } from '@/repositories';
 import { ApiConfigService } from '@/libs';
 import type { WorkerResult } from '@/workers/bloom-filter.worker';
+import { Role } from '@/generated/prisma/enums';
 
 // ─── Module-level mocks (hoisted by Jest before imports) ─────────────────────
 
@@ -198,23 +199,59 @@ describe('AvailabilityService', () => {
     });
   });
 
-  // ─── addNickname ──────────────────────────────────────────────────────────
+  // ─── onUserCreated ────────────────────────────────────────────────────────
 
-  describe('addNickname', () => {
-    it('should add the nickname to the filter', () => {
-      service.addNickname('newuser');
+  describe('onUserCreated', () => {
+    it('should add the nickname and email to the filters', () => {
+      service.onUserCreated({
+        userId: '1',
+        nickname: 'newuser',
+        email: 'new@example.com',
+        role: Role.User,
+      });
 
       expect(mockNicknameFilter.add).toHaveBeenCalledWith('newuser');
+      expect(mockEmailFilter.add).toHaveBeenCalledWith('new@example.com');
+    });
+
+    it('should not add email when it is null', () => {
+      service.onUserCreated({
+        userId: '1',
+        nickname: 'newuser',
+        email: null,
+        role: Role.User,
+      });
+
+      expect(mockNicknameFilter.add).toHaveBeenCalledWith('newuser');
+      expect(mockEmailFilter.add).not.toHaveBeenCalled();
     });
   });
 
-  // ─── addEmail ─────────────────────────────────────────────────────────────
+  // ─── onUserUpdated ────────────────────────────────────────────────────────
 
-  describe('addEmail', () => {
-    it('should add the email to the filter', () => {
-      service.addEmail('new@example.com');
+  describe('onUserUpdated', () => {
+    it('should add the updated nickname and email to the filters', () => {
+      service.onUserUpdated({
+        userId: '1',
+        nickname: 'renamed',
+        email: 'renamed@example.com',
+        role: Role.User,
+      });
 
-      expect(mockEmailFilter.add).toHaveBeenCalledWith('new@example.com');
+      expect(mockNicknameFilter.add).toHaveBeenCalledWith('renamed');
+      expect(mockEmailFilter.add).toHaveBeenCalledWith('renamed@example.com');
+    });
+
+    it('should not add email when it is null', () => {
+      service.onUserUpdated({
+        userId: '1',
+        nickname: 'renamed',
+        email: null,
+        role: Role.User,
+      });
+
+      expect(mockNicknameFilter.add).toHaveBeenCalledWith('renamed');
+      expect(mockEmailFilter.add).not.toHaveBeenCalled();
     });
   });
 });

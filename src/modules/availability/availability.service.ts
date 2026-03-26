@@ -1,7 +1,8 @@
 import * as path from 'path';
 import { Worker } from 'worker_threads';
-import { ApiConfigService } from '@/libs';
+import { ApiConfigService, AppEvents, EventPayloads } from '@/libs';
 import { Injectable, OnModuleInit } from '@nestjs/common';
+import { OnEvent } from '@nestjs/event-emitter';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { BloomFilter } from 'bloom-filters';
 import { WorkerInput, WorkerResult } from '@/workers/bloom-filter.worker';
@@ -64,11 +65,29 @@ export class AvailabilityService implements OnModuleInit {
     return this.emailFilter.has(email);
   }
 
-  addNickname(nickname: string) {
+  private addNickname(nickname: string) {
     this.nicknameFilter.add(nickname);
   }
 
-  addEmail(email: string) {
+  private addEmail(email: string) {
     this.emailFilter.add(email);
+  }
+
+  @OnEvent(AppEvents.USER_CREATED)
+  onUserCreated(payload: EventPayloads[typeof AppEvents.USER_CREATED]) {
+    this.addNickname(payload.nickname);
+
+    if (payload.email) {
+      this.addEmail(payload.email);
+    }
+  }
+
+  @OnEvent(AppEvents.USER_UPDATED)
+  onUserUpdated(payload: EventPayloads[typeof AppEvents.USER_UPDATED]) {
+    this.addNickname(payload.nickname);
+
+    if (payload.email) {
+      this.addEmail(payload.email);
+    }
   }
 }

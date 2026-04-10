@@ -16,6 +16,7 @@ import {
   RedisModule,
 } from './libs';
 import { ScheduleModule } from '@nestjs/schedule';
+import { AppController } from './app.controller';
 
 @Module({
   imports: [
@@ -76,5 +77,6 @@ import { ScheduleModule } from '@nestjs/schedule';
       useClass: GlobalExceptionFilter,
     },
   ],
+  controllers: [AppController],
 })
 export class AppModule {}

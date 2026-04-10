@@ -1,0 +1,26 @@
+# Development image — no build step, source is mounted as a volume
+FROM node:22-alpine
+
+RUN corepack enable
+
+WORKDIR /app
+
+# Install ALL dependencies (including devDependencies) before mounting source.
+# Copying only manifests first maximises Docker layer cache:
+# if package.json / yarn.lock haven't changed this layer is reused.
+COPY package.json yarn.lock .yarnrc.yml ./
+COPY .yarn ./.yarn
+RUN yarn install
+
+# Generate Prisma client inside the image so the container has it from the start.
+# The schema is copied explicitly — the rest of the source arrives via volume mount.
+COPY prisma ./prisma
+COPY prisma.config.ts ./
+RUN yarn prisma generate
+
+COPY scripts/dev-entrypoint.sh ./scripts/dev-entrypoint.sh
+RUN chmod +x ./scripts/dev-entrypoint.sh
+
+EXPOSE 3000
+
+CMD ["sh", "./scripts/dev-entrypoint.sh"]

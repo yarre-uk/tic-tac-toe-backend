@@ -3,11 +3,14 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
+import { loadSecretsFromSSM } from './utils';
 
 const PORT = process.env.PORT ?? 3000;
 const SWAGGER_ROUTE = 'api';
 
 async function bootstrap() {
+  await loadSecretsFromSSM();
+
   const app = await NestFactory.create(AppModule);
 
   const config = new DocumentBuilder()

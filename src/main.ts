@@ -1,4 +1,5 @@
 import { NestFactory } from '@nestjs/core';
+import { NestExpressApplication } from '@nestjs/platform-express';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
@@ -11,7 +12,12 @@ const SWAGGER_ROUTE = 'api';
 async function bootstrap() {
   await loadSecretsFromSSM();
 
-  const app = await NestFactory.create(AppModule);
+  const app = await NestFactory.create<NestExpressApplication>(AppModule);
+
+  // Trust the first proxy hop (Nginx) so Express reads X-Forwarded-For
+  // and X-Forwarded-Proto correctly. Required for req.ip and secure cookies
+  // to work behind a reverse proxy.
+  app.set('trust proxy', 1);
 
   const config = new DocumentBuilder()
     .setTitle('Tic Tac Toe API')

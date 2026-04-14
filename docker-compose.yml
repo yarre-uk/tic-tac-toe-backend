@@ -36,7 +36,7 @@ services:
     environment:
       NODE_ENV: production
       AWS_REGION: eu-west-1
-      # App reads the rest from SSM at startup
+      COMPOSE_PROJECT_NAME: ttt
     depends_on:
       postgres:
         condition: service_healthy

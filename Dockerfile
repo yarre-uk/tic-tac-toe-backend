@@ -31,6 +31,8 @@ COPY --from=builder --chown=nestjs:nodejs /app/prisma ./prisma
 COPY --from=builder --chown=nestjs:nodejs /app/prisma.config.ts ./
 COPY --from=builder --chown=nestjs:nodejs /app/scripts/entrypoint.sh ./scripts/entrypoint.sh
 
+RUN chmod +x ./scripts/entrypoint.sh
+
 USER nestjs
 
 EXPOSE 3000

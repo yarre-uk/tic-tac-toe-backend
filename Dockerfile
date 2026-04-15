@@ -19,6 +19,8 @@ RUN yarn build
 # ── Stage 2: Production image ───────────────────────────────────────
 FROM node:22-alpine AS run
 
+RUN apk add --no-cache aws-cli
+
 RUN corepack enable
 RUN addgroup -g 1001 -S nodejs && adduser -S nestjs -u 1001
 

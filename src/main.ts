@@ -4,14 +4,11 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
-import { loadSecretsFromSSM } from './utils';
 
 const PORT = process.env.PORT ?? 3000;
 const SWAGGER_ROUTE = 'api';
 
 async function bootstrap() {
-  await loadSecretsFromSSM();
-
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   // Trust the first proxy hop (Nginx) so Express reads X-Forwarded-For

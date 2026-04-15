@@ -1,21 +1,27 @@
 #!/bin/sh
-set -euo pipefail
+set -eu
 
-POSTGRES_USER=$(aws ssm get-parameter \
-  --name "/ttt/prod/POSTGRES_USER" --region eu-west-1 \
-  --query "Parameter.Value" --output text)
+# Fetch all parameters under /ttt/prod/ in one API call and export them.
+# Writing to a temp file avoids the subshell scope issue with piped while loops
+# (variables set inside a pipe are lost when the pipe closes).
+_env_file=$(mktemp)
 
-POSTGRES_PASSWORD=$(aws ssm get-parameter \
-  --name "/ttt/prod/POSTGRES_PASSWORD" --with-decryption --region eu-west-1 \
-  --query "Parameter.Value" --output text)
+aws ssm get-parameters-by-path \
+  --path "/ttt/prod/" \
+  --with-decryption \
+  --region "${AWS_REGION:-eu-west-1}" \
+  --query "Parameters[].[Name,Value]" \
+  --output text \
+  | while IFS=$(printf '\t') read -r name value; do
+      key=$(echo "$name" | sed 's|.*/||')
+      # Single-quote the value and escape any single quotes inside it
+      safe_value=$(echo "$value" | sed "s/'/'\\\\''/g")
+      echo "export ${key}='${safe_value}'"
+    done > "$_env_file"
 
-POSTGRES_DB=$(aws ssm get-parameter \
-  --name "/ttt/prod/POSTGRES_DB" --region eu-west-1 \
-  --query "Parameter.Value" --output text)
-
-REDIS_PASSWORD=$(aws ssm get-parameter \
-  --name "/ttt/prod/REDIS_PASSWORD" --with-decryption --region eu-west-1 \
-  --query "Parameter.Value" --output text)
+# shellcheck source=/dev/null
+. "$_env_file"
+rm -f "$_env_file"
 
 export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
 

@@ -92,8 +92,6 @@ jobs:
     needs: [lint, test]
     # Only deploy on push to main — not on PRs or dev branch
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
-    outputs:
-      image: ${{ steps.build.outputs.image }}
 
     steps:
       - uses: actions/checkout@v4
@@ -109,18 +107,14 @@ jobs:
         uses: aws-actions/amazon-ecr-login@v2
 
       - name: Build and push image
-        id: build
         run: |
-          IMAGE_TAG=${{ github.sha }}
-          IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
 
           docker build -t "$IMAGE_URI" .
           docker push "$IMAGE_URI"
 
           docker tag "$IMAGE_URI" "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
           docker push "$ECR_REGISTRY/$ECR_REPOSITORY:latest"
-
-          echo "image=$IMAGE_URI" >> $GITHUB_OUTPUT
 
   deploy:
     name: Deploy to EC2
@@ -136,4 +130,4 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            ~/app/scripts/deploy.sh "${{ needs.build-and-push.outputs.image }}"
+            ~/app/scripts/deploy.sh "${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}"

@@ -3,6 +3,8 @@ name: CI/CD
 on:
   push:
     branches: [main, dev]
+    tags: 
+      - 'v*'
   pull_request:
     branches: [main, dev]
 
@@ -91,7 +93,7 @@ jobs:
     runs-on: ubuntu-latest
     needs: [lint, test]
     # Only deploy on push to main — not on PRs or dev branch
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.ref == 'refs/heads/main' || startsWith(github.ref, 'refs/tags/')
 
     steps:
       - uses: actions/checkout@v4
@@ -108,7 +110,8 @@ jobs:
 
       - name: Build and push image
         run: |
-          IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:${{ github.sha }}
+          IMAGE_TAG=${{ github.ref_name }}
+          IMAGE_URI=$ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
 
           docker build -t "$IMAGE_URI" .
           docker push "$IMAGE_URI"
@@ -130,4 +133,4 @@ jobs:
           username: ${{ secrets.EC2_USER }}
           key: ${{ secrets.EC2_SSH_KEY }}
           script: |
-            ~/app/scripts/deploy.sh "${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ github.sha }}"
+            ~/app/scripts/deploy.sh "${{ secrets.ECR_REGISTRY }}/${{ secrets.ECR_REPOSITORY }}:${{ github.ref_name }}

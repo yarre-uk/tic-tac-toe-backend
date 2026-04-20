@@ -5,6 +5,7 @@ import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
+import { NextFunction, Request, Response } from 'express';
 
 const PORT = process.env.PORT ?? 3000;
 const SWAGGER_ROUTE = 'api';
@@ -14,20 +15,14 @@ async function bootstrap() {
 
   app.set('trust proxy', 1);
 
-  app.use(
-    helmet({
-      contentSecurityPolicy: {
-        directives: {
-          defaultSrc: ["'self'"],
-          scriptSrc: ["'self'", "'unsafe-inline'"],
-          scriptSrcElem: ["'self'", "'unsafe-inline'"],
-          styleSrc: ["'self'", "'unsafe-inline'"],
-          imgSrc: ["'self'", 'data:'],
-          mediaSrc: ["'self'", 'data:'],
-        },
-      },
-    }),
-  );
+  const helmetMiddleware = helmet();
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith(`/${SWAGGER_ROUTE}`)) {
+      return next();
+    }
+
+    helmetMiddleware(req, res, next);
+  });
 
   const config = new DocumentBuilder()
     .setTitle('Tic Tac Toe API')

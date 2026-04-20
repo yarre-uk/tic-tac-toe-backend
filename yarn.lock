@@ -5869,6 +5869,13 @@ __metadata:
   languageName: node
   linkType: hard
 
+"helmet@npm:^8.1.0":
+  version: 8.1.0
+  resolution: "helmet@npm:8.1.0"
+  checksum: 10c0/94d3a7ebc88dbda1421635bdf33f00724adb5252269e93c5ab296ec0db11336d01265659ad3739ab1a1e881fb23a686ff7e788aac6a5fb929285134f157df763
+  languageName: node
+  linkType: hard
+
 "hono@npm:4.11.4":
   version: 4.11.4
   resolution: "hono@npm:4.11.4"
@@ -7809,6 +7816,7 @@ __metadata:
     eslint-config-prettier: "npm:^10.0.1"
     eslint-plugin-prettier: "npm:^5.2.2"
     globals: "npm:^16.0.0"
+    helmet: "npm:^8.1.0"
     ioredis: "npm:^5.10.0"
     jest: "npm:^30.0.0"
     prettier: "npm:^3.4.2"

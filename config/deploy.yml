@@ -1,0 +1,64 @@
+service: tic-tac-toe-backend
+image: tic-tac-toe-backend
+
+servers:
+  web:
+    - 54.87.165.123
+
+registry:
+  server: 705071585727.dkr.ecr.eu-west-1.amazonaws.com
+  username: AWS
+  password:
+    - KAMAL_REGISTRY_PASSWORD
+
+ssh:
+  user: admin
+  keys:
+    - ~/.ssh/ttt-key.pem
+
+builder:
+  arch: amd64
+
+proxy:
+  ssl: true
+  host: 54.87.165.123.sslip.io
+  app_port: 3000
+  healthcheck:
+    path: /health
+    interval: 10
+
+env:
+  clear:
+    NODE_ENV: production
+    AWS_REGION: eu-west-1
+    POSTGRES_HOST: tic-tac-toe-backend-postgres
+    REDIS_HOST: tic-tac-toe-backend-redis
+
+accessories:
+  postgres:
+    image: postgres:16-alpine
+    host: 54.87.165.123
+    port: 5432
+    env:
+      secret:
+        - POSTGRES_USER
+        - POSTGRES_PASSWORD
+        - POSTGRES_DB
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    options:
+      health-cmd: "pg_isready -U ${POSTGRES_USER:-postgres}"
+      health-interval: 10s
+      health-timeout: 5s
+      health-retries: 5
+
+  redis:
+    image: redis:7-alpine
+    host: 54.87.165.123
+    port: 6379
+    cmd: "sh -c 'redis-server --requirepass $REDIS_PASSWORD'"
+    env:
+      secret:
+        - REDIS_PASSWORD
+    volumes:
+      - redis_data:/data

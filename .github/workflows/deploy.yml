@@ -126,6 +126,11 @@ jobs:
     if: startsWith(github.ref, 'refs/tags/v')
 
     steps:
+      - name: Set up SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/ttt-key.pem
+          chmod 600 ~/.ssh/ttt-key.pem
       - name: Deploy via SSH
         uses: appleboy/ssh-action@v1.0.3
         with:

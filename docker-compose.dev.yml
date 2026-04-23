@@ -52,8 +52,6 @@ services:
       - ./:/app/
       - /app/node_modules
 
-
-
 volumes:
   postgres_data:
   redis_data:

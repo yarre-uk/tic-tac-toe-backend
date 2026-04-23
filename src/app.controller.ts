@@ -9,7 +9,7 @@ export class AppController {
     return {
       status: 'ok',
       timestamp: new Date().toISOString(),
-      message: 'Service is Healthy',
+      message: 'Service is Healthy!',
     };
   }
 }

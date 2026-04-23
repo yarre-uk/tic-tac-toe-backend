@@ -23,7 +23,7 @@ aws ssm get-parameters-by-path \
 . "$_env_file"
 rm -f "$_env_file"
 
-export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${POSTGRES_DB}"
+export DATABASE_URL="postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@${POSTGRES_HOST:-postgres}:5432/${POSTGRES_DB}"
 
 npx prisma migrate deploy
 

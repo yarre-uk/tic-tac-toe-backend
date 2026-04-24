@@ -6,6 +6,7 @@ import cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
 import helmet from 'helmet';
 import { NextFunction, Request, Response } from 'express';
+import compression from 'compression';
 
 const PORT = process.env.PORT ?? 3000;
 const SWAGGER_ROUTE = 'api';
@@ -31,6 +32,7 @@ async function bootstrap() {
     .addBearerAuth()
     .build();
 
+  app.use(compression());
   app.use(cookieParser());
 
   app.useGlobalPipes(

@@ -23,6 +23,7 @@ proxy:
   ssl: true
   host: 54.87.165.123.sslip.io
   app_port: 3000
+  forward_headers: true
   healthcheck:
     path: /health
     interval: 10

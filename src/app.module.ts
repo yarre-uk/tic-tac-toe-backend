@@ -5,6 +5,7 @@ import { JwtModule } from '@nestjs/jwt';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
 import { JwtAuthGuard } from './guards/auth.guard';
 import { RolesGuard } from './guards/roles.guard';
+import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
 import { GlobalExceptionFilter } from './exceptions/exception.filter';
@@ -21,6 +22,7 @@ import { AppController } from './app.controller';
 @Module({
   imports: [
     ScheduleModule.forRoot(),
+    ThrottlerModule.forRoot([{ ttl: 60_000, limit: 30 }]),
     ApiConfigModule.register({ global: true, envFilePath: '.env' }),
     PrismaModule.registerAsync({
       global: true,
@@ -56,6 +58,10 @@ import { AppController } from './app.controller';
     AuthModule,
   ],
   providers: [
+    {
+      provide: APP_GUARD,
+      useClass: ThrottlerGuard,
+    },
     {
       provide: APP_GUARD,
       useClass: JwtAuthGuard,

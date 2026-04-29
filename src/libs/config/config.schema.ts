@@ -1,7 +1,7 @@
 import * as z from 'zod';
 
 export const EnvSchema = z.object({
-  DATABASE_URL: z.string().url(),
+  DATABASE_URL: z.url(),
 
   JWT_SECRET: z.string().min(32),
   ACCESS_TOKEN_TTL: z.coerce.number().default(900),
@@ -17,6 +17,10 @@ export const EnvSchema = z.object({
   NODE_ENV: z
     .enum(['development', 'production', 'test'])
     .default('development'),
+
+  GOOGLE_CLIENT_ID: z.string(),
+  GOOGLE_CLIENT_SECRET: z.string().min(32),
+  GOOGLE_CALLBACK_URL: z.url(),
 });
 
 export type EnvSchemaInferred = z.infer<typeof EnvSchema>;

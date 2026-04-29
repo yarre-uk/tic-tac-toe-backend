@@ -47,10 +47,7 @@ export class AuthService {
     this.bcryptRounds = this.configService.get('BCRYPT_ROUNDS');
   }
 
-  private async _createTokens(
-    userId: string,
-    role: Role,
-  ): Promise<TokensResponse> {
+  async issueTokens(userId: string, role: Role): Promise<TokensResponse> {
     const accessId = uuidv7();
     const accessPayload = {
       sub: userId,
@@ -104,7 +101,7 @@ export class AuthService {
       throw new UnauthorizedException('Credentials are incorrect!');
     }
 
-    return this._createTokens(user.id, user.role);
+    return this.issueTokens(user.id, user.role);
   }
 
   async signUp(dto: SignUpDto): Promise<TokensResponse> {
@@ -115,7 +112,7 @@ export class AuthService {
       password: hashedPassword,
     });
 
-    return this._createTokens(user.id, user.role);
+    return this.issueTokens(user.id, user.role);
   }
 
   async logOut(refreshToken: string): Promise<void> {
@@ -184,7 +181,7 @@ export class AuthService {
       data: { isActive: false },
     });
 
-    return this._createTokens(stored.user.id, stored.user.role);
+    return this.issueTokens(stored.user.id, stored.user.role);
   }
 
   getSessions(userId: string) {

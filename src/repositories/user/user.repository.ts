@@ -12,6 +12,7 @@ export interface IUserRepository {
   findAllIdentifiers(): Promise<UserIdentifiers[]>;
   findByEmail(email: string): Promise<User | null>;
   findByNickname(nickname: string): Promise<User | null>;
+  findByGoogleId(googleId: string): Promise<User | null>;
   create(data: CreateUserDto & { role: Role }): Promise<User>;
   update(id: string, data: UpdateUserDto): Promise<User>;
   delete(id: string): Promise<User>;
@@ -43,15 +44,9 @@ export class UserRepository implements IUserRepository {
     return this.prisma.user.findUnique({ where: { nickname } });
   }
 
-  // async fetchEmails() {
-  //   return (
-  //     await this.prisma.user.findMany({
-  //       select: {
-  //         email: true,
-  //       },
-  //     })
-  //   ).flat(1);
-  // }
+  findByGoogleId(googleId: string) {
+    return this.prisma.user.findUnique({ where: { googleId } });
+  }
 
   create(data: CreateUserDto & { role: Role }) {
     return this.prisma.user.create({ data });

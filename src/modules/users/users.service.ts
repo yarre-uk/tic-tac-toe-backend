@@ -4,6 +4,7 @@ import { isDefined } from '@/utils';
 import { UserRepository } from '@/repositories';
 import { AppEvents, TypedEventEmitter } from '@/libs';
 import { CreateUserDto, UpdateUserDto } from './dto';
+import { GoogleUserProfile } from './types';
 
 @Injectable()
 export class UsersService {
@@ -49,6 +50,46 @@ export class UsersService {
   async create(createUserDto: CreateUserDto) {
     const user = await this.userRepository.create({
       ...createUserDto,
+      role: Role.User,
+    });
+
+    this.eventEmitter.emit(AppEvents.USER_CREATED, {
+      userId: user.id,
+      nickname: user.nickname,
+      email: user.email,
+      role: user.role,
+    });
+
+    return user;
+  }
+
+  async findOrCreateGoogleUser({
+    googleId,
+    email,
+    firstName,
+    lastName,
+  }: GoogleUserProfile) {
+    const byGoogleId = await this.userRepository.findByGoogleId(googleId);
+
+    if (isDefined(byGoogleId)) {
+      return byGoogleId;
+    }
+
+    const byEmail = await this.userRepository.findByEmail(email);
+
+    if (isDefined(byEmail)) {
+      return this.userRepository.update(byEmail.id, { googleId });
+    }
+
+    const nickname = `${firstName}.${lastName}`
+      .toLowerCase()
+      .replace(/\s+/g, '');
+
+    const user = await this.userRepository.create({
+      googleId,
+      email,
+      nickname,
+      password: null,
       role: Role.User,
     });
 

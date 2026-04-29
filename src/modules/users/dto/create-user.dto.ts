@@ -4,9 +4,12 @@ export class CreateUserDto {
   @ApiPropertyOptional({ example: 'john@example.com', nullable: true })
   email?: string | null;
 
-  @ApiProperty({ example: 'johndoe' })
+  @ApiProperty({ example: 'john-doe' })
   nickname!: string;
 
-  @ApiProperty({ example: 'P@ssw0rd123!' })
-  password!: string;
+  @ApiPropertyOptional({ example: 'P@ssw0rd123!' })
+  password?: string | null;
+
+  @ApiPropertyOptional({ example: 'googleId' })
+  googleId?: string | null;
 }

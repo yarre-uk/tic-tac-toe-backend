@@ -1,10 +1,12 @@
 import {
   Body,
   Controller,
+  Get,
   Post,
   Req,
   Res,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import {
   ApiBearerAuth,
@@ -24,7 +26,8 @@ import {
   SignUpDto,
   TokenResponseDto,
 } from './dtos';
-import { IsPublic } from '@/guards';
+import { GoogleGuard, IsPublic } from '@/guards';
+import { User } from '@/generated/prisma/client';
 
 export const REFRESH_TOKEN_KEY = 'refreshToken';
 
@@ -141,5 +144,27 @@ export class AuthController {
   @Post('change-password')
   async changePassword(@Body() dto: ChangePasswordDto) {
     return this.authService.changePassword(dto);
+  }
+
+  @IsPublic()
+  @Get('google')
+  @UseGuards(GoogleGuard)
+  googleAuth() {}
+
+  @IsPublic()
+  @Get('google/callback')
+  @UseGuards(GoogleGuard)
+  async googleCallback(
+    @Res({ passthrough: true }) response: Response,
+    @Req() request: { user: User } & Request,
+  ) {
+    const user = request['user'] as User;
+    const tokens = await this.authService.issueTokens(user.id, 'User');
+
+    this.setRefreshTokenCookie(response, tokens.refreshToken);
+
+    response.redirect(
+      `https://yourfrontend.com/auth?token=${tokens.accessToken}`,
+    );
   }
 }

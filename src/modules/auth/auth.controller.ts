@@ -12,6 +12,8 @@ import {
 import {
   ApiBearerAuth,
   ApiCookieAuth,
+  ApiExcludeEndpoint,
+  ApiFoundResponse,
   ApiNoContentResponse,
   ApiOkResponse,
   ApiOperation,
@@ -147,16 +149,26 @@ export class AuthController {
     return this.authService.changePassword(dto);
   }
 
+  @ApiOperation({ summary: 'Initiate Google OAuth2 flow' })
+  @ApiFoundResponse({ description: 'Redirects to Google consent screen' })
   @IsPublic()
   @Get('google')
   @UseGuards(GoogleGuard)
   googleAuth() {}
 
+  @ApiOperation({
+    summary: 'Google OAuth2 callback — issues tokens and redirects to frontend',
+  })
+  @ApiFoundResponse({
+    description:
+      'Redirects to FRONTEND_URL/auth?token=<accessToken> and sets refreshToken cookie',
+  })
+  @ApiCookieAuth(REFRESH_TOKEN_KEY)
   @IsPublic()
   @Get('google/callback')
   @UseGuards(GoogleGuard)
   async googleCallback(
-    @Res({ passthrough: true }) response: Response,
+    @Res() response: Response,
     @Req() request: { user: User } & Request,
   ) {
     const user = request['user'] as User;
@@ -169,6 +181,7 @@ export class AuthController {
     );
   }
 
+  @ApiExcludeEndpoint()
   @IsPublic()
   @Get('/')
   devTokenCapture(@Query('token') token: string) {

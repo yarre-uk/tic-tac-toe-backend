@@ -21,6 +21,8 @@ export const EnvSchema = z.object({
   GOOGLE_CLIENT_ID: z.string(),
   GOOGLE_CLIENT_SECRET: z.string().min(32),
   GOOGLE_CALLBACK_URL: z.url(),
+
+  FRONTEND_URL: z.url(),
 });
 
 export type EnvSchemaInferred = z.infer<typeof EnvSchema>;

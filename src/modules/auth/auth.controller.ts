@@ -3,6 +3,7 @@ import {
   Controller,
   Get,
   Post,
+  Query,
   Req,
   Res,
   UnauthorizedException,
@@ -164,7 +165,13 @@ export class AuthController {
     this.setRefreshTokenCookie(response, tokens.refreshToken);
 
     response.redirect(
-      `https://yourfrontend.com/auth?token=${tokens.accessToken}`,
+      `${this.configService.get('FRONTEND_URL')}/auth?token=${tokens.accessToken}`,
     );
+  }
+
+  @IsPublic()
+  @Get('/')
+  devTokenCapture(@Query('token') token: string) {
+    return { accessToken: token };
   }
 }

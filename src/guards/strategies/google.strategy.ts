@@ -1,15 +1,16 @@
 import { ApiConfigService } from '@/libs';
-import { UsersService } from '@/modules';
+import { AvailabilityService, UsersService } from '@/modules';
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { isDefined } from 'class-validator';
+import { isDefined } from '@/utils';
 import { Strategy, VerifyCallback, Profile } from 'passport-google-oauth20';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
   constructor(
-    private readonly configService: ApiConfigService,
+    readonly configService: ApiConfigService,
     private readonly usersService: UsersService,
+    private readonly availabilityService: AvailabilityService,
   ) {
     super({
       clientID: configService.get('GOOGLE_CLIENT_ID'),
@@ -25,24 +26,22 @@ export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {
     profile: Profile,
     done: VerifyCallback,
   ) {
-    const { id, emails, name } = profile;
+    const { id, emails } = profile;
 
     const email = emails?.at(0)?.value;
-    const firstName = name?.givenName;
-    const lastName = name?.familyName;
 
-    //TODO add [pictures]
-    // const picture = photos?.at(0)?.value;
-
-    if (!isDefined(email) || !isDefined(firstName) || !isDefined(lastName)) {
-      throw new Error('Incomplete Google profile!');
+    if (!isDefined(email)) {
+      throw new Error('No Google email found!');
     }
+
+    const nickname = this.availabilityService.createNickname(
+      email.split('@')[0],
+    );
 
     const user = await this.usersService.findOrCreateGoogleUser({
       googleId: id,
       email,
-      firstName,
-      lastName,
+      nickname,
     });
 
     done(null, user);

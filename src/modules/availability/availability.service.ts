@@ -94,4 +94,16 @@ export class AvailabilityService implements OnModuleInit {
       this.addEmail(payload.email);
     }
   }
+
+  createNickname(basis: string): string {
+    const loverCased = basis.toLocaleLowerCase();
+
+    let counter = 0;
+
+    while (this.hasNickname(`${loverCased}${counter}`)) {
+      counter++;
+    }
+
+    return counter === 0 ? loverCased : `${loverCased}${counter}`;
+  }
 }

@@ -1,9 +1,17 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@/generated/prisma/client';
 import { Role } from '@/generated/prisma/enums';
 import { isDefined } from '@/utils';
 import { UserRepository } from '@/repositories';
 import { AppEvents, TypedEventEmitter } from '@/libs';
 import { CreateUserDto, UpdateUserDto } from './dto';
+import { GoogleUserProfile } from './types';
+
+const MAX_CREATING_GOOGLE_USER_ATTEMPTS = 10;
 
 @Injectable()
 export class UsersService {
@@ -60,6 +68,64 @@ export class UsersService {
     });
 
     return user;
+  }
+
+  async findOrCreateGoogleUser({
+    googleId,
+    email,
+    nickname,
+  }: GoogleUserProfile) {
+    const byGoogleId = await this.userRepository.findByGoogleId(googleId);
+
+    if (isDefined(byGoogleId)) {
+      return byGoogleId;
+    }
+
+    const byEmail = await this.userRepository.findByEmail(email);
+
+    if (isDefined(byEmail)) {
+      return this.userRepository.update(byEmail.id, { googleId });
+    }
+
+    let attempt = 0;
+
+    while (attempt < MAX_CREATING_GOOGLE_USER_ATTEMPTS) {
+      const candidate = attempt === 0 ? nickname : `${nickname}${attempt}`;
+
+      try {
+        const user = await this.userRepository.create({
+          googleId,
+          email,
+          nickname: candidate,
+          password: null,
+          role: Role.User,
+        });
+
+        this.eventEmitter.emit(AppEvents.USER_CREATED, {
+          userId: user.id,
+          nickname: user.nickname,
+          email: user.email,
+          role: user.role,
+        });
+
+        return user;
+      } catch (error) {
+        const isNicknameConflict =
+          error instanceof Prisma.PrismaClientKnownRequestError &&
+          error.code === 'P2002' &&
+          (error.meta?.target as string[])?.includes('nickname');
+
+        if (!isNicknameConflict) {
+          throw error;
+        }
+
+        attempt++;
+      }
+    }
+
+    throw new InternalServerErrorException(
+      'Failed to generate a unique nickname for Google user',
+    );
   }
 
   async update(id: string, data: UpdateUserDto) {

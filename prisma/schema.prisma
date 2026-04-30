@@ -24,7 +24,8 @@ model User {
   id       String  @id @default(uuid())
   email    String? @unique
   nickname String  @unique
-  password String
+  password String?
+  googleId String? @unique
   role     Role
 
   refreshTokens RefreshToken[]

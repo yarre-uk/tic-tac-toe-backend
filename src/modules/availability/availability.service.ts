@@ -1,7 +1,7 @@
 import * as path from 'path';
 import { Worker } from 'worker_threads';
 import { ApiConfigService, AppEvents, EventPayloads } from '@/libs';
-import { Injectable, OnModuleInit } from '@nestjs/common';
+import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { BloomFilter } from 'bloom-filters';
@@ -10,6 +10,8 @@ import { UserIdentifiers, UserRepository } from '@/repositories';
 
 @Injectable()
 export class AvailabilityService implements OnModuleInit {
+  private readonly logger = new Logger('AvailabilityService');
+
   private nicknameFilter!: BloomFilter;
   private emailFilter!: BloomFilter;
   private falsePositiveRate: number;
@@ -32,6 +34,8 @@ export class AvailabilityService implements OnModuleInit {
 
     this.nicknameFilter = BloomFilter.fromJSON(nicknameFilter) as BloomFilter;
     this.emailFilter = BloomFilter.fromJSON(emailFilter) as BloomFilter;
+
+    this.logger.log('New Bloom filter has been issued');
   }
 
   private runWorker(identifiers: UserIdentifiers[]): Promise<WorkerResult> {
@@ -89,5 +93,21 @@ export class AvailabilityService implements OnModuleInit {
     if (payload.email) {
       this.addEmail(payload.email);
     }
+  }
+
+  createNickname(basis: string): string {
+    const lowerCased = basis.toLocaleLowerCase();
+
+    if (!this.hasNickname(lowerCased)) {
+      return lowerCased;
+    }
+
+    let counter = 1;
+
+    while (this.hasNickname(`${lowerCased}${counter}`)) {
+      counter++;
+    }
+
+    return `${lowerCased}${counter}`;
   }
 }

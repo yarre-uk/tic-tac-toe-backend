@@ -4,10 +4,11 @@ import { AvailabilityModule } from '../availability';
 import { AuthService } from './auth.service';
 import { AuthController } from './auth.controller';
 import { SessionsController } from './sessions.controller';
+import { GoogleStrategy } from '@/guards/strategies';
 
 @Module({
   imports: [UsersModule, AvailabilityModule],
-  providers: [AuthService],
+  providers: [AuthService, GoogleStrategy],
   controllers: [AuthController, SessionsController],
 })
 export class AuthModule {}

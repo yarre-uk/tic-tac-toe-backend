@@ -1,0 +1,17 @@
+meta {
+  name: Google OAuth
+  type: http
+  seq: 6
+}
+
+get {
+  url: {{baseUrl}}/auth/google
+  body: none
+  auth: none
+}
+
+docs {
+  Initiates Google OAuth flow. Open this URL in a browser — it redirects to Google's
+  consent screen, then back to /auth/google/callback, which sets the refresh token
+  cookie and redirects to FRONTEND_URL/auth?token=<accessToken>.
+}

@@ -9,4 +9,7 @@ export class UpdateUserDto {
 
   @ApiPropertyOptional({ example: 'NewP@ssw0rd123!' })
   password?: string;
+
+  @ApiPropertyOptional()
+  googleId?: string;
 }

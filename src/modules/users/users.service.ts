@@ -1,4 +1,8 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import {
+  Injectable,
+  InternalServerErrorException,
+  NotFoundException,
+} from '@nestjs/common';
 import { Prisma } from '@/generated/prisma/client';
 import { Role } from '@/generated/prisma/enums';
 import { isDefined } from '@/utils';
@@ -118,6 +122,10 @@ export class UsersService {
         attempt++;
       }
     }
+
+    throw new InternalServerErrorException(
+      'Failed to generate a unique nickname for Google user',
+    );
   }
 
   async update(id: string, data: UpdateUserDto) {

@@ -227,6 +227,43 @@ describe('AvailabilityService', () => {
     });
   });
 
+  // ─── createNickname ───────────────────────────────────────────────────────
+
+  describe('createNickname', () => {
+    it('should return the lowercased basis when it is not in the filter', () => {
+      mockNicknameFilter.has.mockReturnValue(false);
+
+      expect(service.createNickname('John')).toBe('john');
+      expect(mockNicknameFilter.has).toHaveBeenCalledWith('john');
+    });
+
+    it('should return basis + 1 when the basis is taken but basis1 is free', () => {
+      mockNicknameFilter.has
+        .mockReturnValueOnce(true) // 'john' taken
+        .mockReturnValueOnce(false); // 'john1' free
+
+      expect(service.createNickname('john')).toBe('john1');
+    });
+
+    it('should increment until a free slot is found', () => {
+      mockNicknameFilter.has
+        .mockReturnValueOnce(true) // 'john' taken
+        .mockReturnValueOnce(true) // 'john1' taken
+        .mockReturnValueOnce(true) // 'john2' taken
+        .mockReturnValueOnce(false); // 'john3' free
+
+      expect(service.createNickname('john')).toBe('john3');
+    });
+
+    it('should lowercase the basis before checking', () => {
+      mockNicknameFilter.has.mockReturnValue(false);
+
+      service.createNickname('UPPERCASE');
+
+      expect(mockNicknameFilter.has).toHaveBeenCalledWith('uppercase');
+    });
+  });
+
   // ─── onUserUpdated ────────────────────────────────────────────────────────
 
   describe('onUserUpdated', () => {

@@ -96,14 +96,18 @@ export class AvailabilityService implements OnModuleInit {
   }
 
   createNickname(basis: string): string {
-    const loverCased = basis.toLocaleLowerCase();
+    const lowerCased = basis.toLocaleLowerCase();
 
-    let counter = 0;
+    if (!this.hasNickname(lowerCased)) {
+      return lowerCased;
+    }
 
-    while (this.hasNickname(`${loverCased}${counter}`)) {
+    let counter = 1;
+
+    while (this.hasNickname(`${lowerCased}${counter}`)) {
       counter++;
     }
 
-    return counter === 0 ? loverCased : `${loverCased}${counter}`;
+    return `${lowerCased}${counter}`;
   }
 }

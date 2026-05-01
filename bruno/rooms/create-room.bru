@@ -1,0 +1,27 @@
+meta {
+  name: Create Room
+  type: http
+  seq: 3
+}
+
+post {
+  url: {{baseUrl}}/rooms
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "name": "my-room"
+  }
+}
+
+script:post-response {
+  if (res.body.id) {
+    bru.setVar("roomId", res.body.id);
+  }
+}

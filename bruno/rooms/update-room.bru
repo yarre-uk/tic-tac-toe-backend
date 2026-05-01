@@ -1,0 +1,21 @@
+meta {
+  name: Update Room
+  type: http
+  seq: 6
+}
+
+patch {
+  url: {{baseUrl}}/rooms/{{roomId}}
+  body: json
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}
+
+body:json {
+  {
+    "name": "new-name"
+  }
+}

@@ -1,0 +1,15 @@
+meta {
+  name: Leave Room
+  type: http
+  seq: 5
+}
+
+delete {
+  url: {{baseUrl}}/rooms/leave
+  body: none
+  auth: bearer
+}
+
+auth:bearer {
+  token: {{accessToken}}
+}

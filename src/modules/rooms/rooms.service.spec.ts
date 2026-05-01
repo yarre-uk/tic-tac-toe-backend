@@ -81,7 +81,9 @@ describe('RoomsService', () => {
 
     mockPrisma = {
       user: { findUnique: jest.fn() },
-      $transaction: jest.fn().mockImplementation((cb) => cb(mockTx)),
+      $transaction: jest
+        .fn()
+        .mockImplementation((cb: (tx: typeof mockTx) => unknown) => cb(mockTx)),
     };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -127,7 +129,10 @@ describe('RoomsService', () => {
 
   describe('create', () => {
     it('should create a room and return it', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ id: OWNER_ID, roomId: null });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: OWNER_ID,
+        roomId: null,
+      });
       mockRepo.create.mockResolvedValue(waitingRoom);
 
       const result = await service.create(OWNER_ID, { name: 'test-room' });
@@ -141,7 +146,10 @@ describe('RoomsService', () => {
     });
 
     it('should throw BadRequestException when user is already in a room', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ id: OWNER_ID, roomId: ROOM_ID });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: OWNER_ID,
+        roomId: ROOM_ID,
+      });
 
       await expect(service.create(OWNER_ID, {})).rejects.toThrow(
         new BadRequestException('You are already in a room'),
@@ -174,42 +182,53 @@ describe('RoomsService', () => {
       // room has 0 players, joining makes 1 — still Waiting
       const emptyWaiting = { ...waitingRoom, players: [] };
       mockRepo.findById.mockResolvedValue(emptyWaiting);
-      mockPrisma.user.findUnique.mockResolvedValue({ id: OWNER_ID, roomId: null });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: OWNER_ID,
+        roomId: null,
+      });
 
       const joined = { ...emptyWaiting, players: [ownerPlayer] };
       mockTx.room.update.mockResolvedValue(joined);
 
       const result = await service.join(OWNER_ID, ROOM_ID);
 
-      expect(mockTx.room.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.not.objectContaining({ status: RoomStatus.Playing }),
-        }),
-      );
+      const [[firstCall]] = mockTx.room.update.mock.calls as [
+        { data: { status?: unknown } },
+      ][];
+      expect(firstCall.data.status).toBeUndefined();
       expect(result).toEqual(joined);
     });
 
     it('should set status to Playing when the room reaches MAX_PLAYERS', async () => {
       // room currently has 1 player; joining fills it
       mockRepo.findById.mockResolvedValue(waitingRoom); // 1 player
-      mockPrisma.user.findUnique.mockResolvedValue({ id: PLAYER_ID, roomId: null });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: PLAYER_ID,
+        roomId: null,
+      });
 
-      const joined = { ...waitingRoom, status: RoomStatus.Playing, players: [ownerPlayer, secondPlayer] };
+      const joined = {
+        ...waitingRoom,
+        status: RoomStatus.Playing,
+        players: [ownerPlayer, secondPlayer],
+      };
       mockTx.room.update.mockResolvedValue(joined);
 
       const result = await service.join(PLAYER_ID, ROOM_ID);
 
-      expect(mockTx.room.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({ status: RoomStatus.Playing }),
-        }),
-      );
+      const [[joinCall]] = mockTx.room.update.mock.calls as [
+        { data: { status?: RoomStatus } },
+      ][];
+      expect(joinCall.data.status).toBe(RoomStatus.Playing);
       expect(result).toEqual(joined);
     });
 
     it('should leave old room first when user is already in one', async () => {
       mockRepo.findById.mockResolvedValue(waitingRoom);
-      mockPrisma.user.findUnique.mockResolvedValue({ id: PLAYER_ID, roomId: OLD_ROOM_ID });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: PLAYER_ID,
+        roomId: OLD_ROOM_ID,
+      });
 
       // old room has only the user — gets deleted
       mockTx.room.findUnique.mockResolvedValue({
@@ -218,13 +237,17 @@ describe('RoomsService', () => {
         ownerId: PLAYER_ID,
         players: [secondPlayer],
       });
-      mockTx.room.update.mockResolvedValue({ ...waitingRoom, players: [ownerPlayer, secondPlayer] });
+      mockTx.room.update.mockResolvedValue({
+        ...waitingRoom,
+        players: [ownerPlayer, secondPlayer],
+      });
 
       await service.join(PLAYER_ID, ROOM_ID);
 
-      expect(mockTx.room.findUnique).toHaveBeenCalledWith(
-        expect.objectContaining({ where: { id: OLD_ROOM_ID } }),
-      );
+      const [[findCall]] = mockTx.room.findUnique.mock.calls as [
+        { where: { id: string } },
+      ][];
+      expect(findCall.where.id).toBe(OLD_ROOM_ID);
     });
   });
 
@@ -232,7 +255,10 @@ describe('RoomsService', () => {
 
   describe('leave', () => {
     it('should throw BadRequestException when user is not in any room', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ id: OWNER_ID, roomId: null });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: OWNER_ID,
+        roomId: null,
+      });
 
       await expect(service.leave(OWNER_ID)).rejects.toThrow(
         new BadRequestException('You are not in a room'),
@@ -240,7 +266,10 @@ describe('RoomsService', () => {
     });
 
     it('should delete the room when the leaving user is the last player', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ id: OWNER_ID, roomId: ROOM_ID });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: OWNER_ID,
+        roomId: ROOM_ID,
+      });
       mockTx.room.findUnique.mockResolvedValue({
         ...waitingRoom,
         players: [ownerPlayer], // only the owner
@@ -249,12 +278,17 @@ describe('RoomsService', () => {
 
       await service.leave(OWNER_ID);
 
-      expect(mockTx.room.delete).toHaveBeenCalledWith({ where: { id: ROOM_ID } });
+      expect(mockTx.room.delete).toHaveBeenCalledWith({
+        where: { id: ROOM_ID },
+      });
       expect(mockTx.room.update).not.toHaveBeenCalled();
     });
 
     it('should transfer ownership when the owner leaves and another player remains', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ id: OWNER_ID, roomId: ROOM_ID });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: OWNER_ID,
+        roomId: ROOM_ID,
+      });
       mockTx.room.findUnique.mockResolvedValue({
         ...waitingRoom,
         players: [ownerPlayer, secondPlayer],
@@ -267,18 +301,18 @@ describe('RoomsService', () => {
 
       await service.leave(OWNER_ID);
 
-      expect(mockTx.room.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.objectContaining({
-            ownerId: PLAYER_ID,
-            status: RoomStatus.Waiting,
-          }),
-        }),
-      );
+      const [[leaveCall]] = mockTx.room.update.mock.calls as [
+        { data: { ownerId?: string; status?: RoomStatus } },
+      ][];
+      expect(leaveCall.data.ownerId).toBe(PLAYER_ID);
+      expect(leaveCall.data.status).toBe(RoomStatus.Waiting);
     });
 
     it('should not change ownership when a non-owner player leaves', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ id: PLAYER_ID, roomId: ROOM_ID });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: PLAYER_ID,
+        roomId: ROOM_ID,
+      });
       mockTx.room.findUnique.mockResolvedValue({
         ...waitingRoom,
         ownerId: OWNER_ID,
@@ -291,15 +325,17 @@ describe('RoomsService', () => {
 
       await service.leave(PLAYER_ID);
 
-      expect(mockTx.room.update).toHaveBeenCalledWith(
-        expect.objectContaining({
-          data: expect.not.objectContaining({ ownerId: expect.anything() }),
-        }),
-      );
+      const [[callArgs]] = mockTx.room.update.mock.calls as [
+        { data: { ownerId?: unknown } },
+      ][];
+      expect(callArgs.data.ownerId).toBeUndefined();
     });
 
     it('should return null when the room no longer exists at transaction time', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({ id: OWNER_ID, roomId: ROOM_ID });
+      mockPrisma.user.findUnique.mockResolvedValue({
+        id: OWNER_ID,
+        roomId: ROOM_ID,
+      });
       mockTx.room.findUnique.mockResolvedValue(null);
 
       await expect(service.leave(OWNER_ID)).resolves.toBeNull();
@@ -314,9 +350,13 @@ describe('RoomsService', () => {
       const updated = { ...waitingRoom, name: 'new-name' };
       mockRepo.update.mockResolvedValue(updated);
 
-      const result = await service.update(OWNER_ID, ROOM_ID, { name: 'new-name' });
+      const result = await service.update(OWNER_ID, ROOM_ID, {
+        name: 'new-name',
+      });
 
-      expect(mockRepo.update).toHaveBeenCalledWith(ROOM_ID, { name: 'new-name' });
+      expect(mockRepo.update).toHaveBeenCalledWith(ROOM_ID, {
+        name: 'new-name',
+      });
       expect(result).toEqual(updated);
     });
 
@@ -325,7 +365,9 @@ describe('RoomsService', () => {
 
       await expect(
         service.update(PLAYER_ID, ROOM_ID, { name: 'new-name' }),
-      ).rejects.toThrow(new ForbiddenException('Only the room owner can update it'));
+      ).rejects.toThrow(
+        new ForbiddenException('Only the room owner can update it'),
+      );
       expect(mockRepo.update).not.toHaveBeenCalled();
     });
 

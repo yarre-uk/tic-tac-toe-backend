@@ -29,6 +29,23 @@ model User {
   role     Role
 
   refreshTokens RefreshToken[]
+  room          Room?          @relation(fields: [roomId], references: [id])
+  
+  roomId        String?
+}
+
+enum RoomStatus {
+  Waiting
+  Playing
+}
+
+model Room {
+  id        String     @id @default(uuid())
+  name      String?
+  status    RoomStatus @default(Waiting)
+  ownerId   String
+  players   User[]
+  createdAt DateTime   @default(now())
 }
 
 model RefreshToken {

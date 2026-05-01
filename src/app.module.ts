@@ -1,10 +1,6 @@
 import { Module } from '@nestjs/common';
-import { UsersModule } from './modules/users/users.module';
-import { AuthModule } from './modules/auth/auth.module';
 import { JwtModule } from '@nestjs/jwt';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
-import { JwtAuthGuard } from './guards/auth.guard';
-import { RolesGuard } from './guards/roles.guard';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
@@ -18,6 +14,8 @@ import {
 } from './libs';
 import { ScheduleModule } from '@nestjs/schedule';
 import { AppController } from './app.controller';
+import { AuthModule, UsersModule, RoomsModule } from './modules';
+import { JwtAuthGuard, RolesGuard } from './guards';
 
 @Module({
   imports: [
@@ -56,6 +54,7 @@ import { AppController } from './app.controller';
     EventsModule,
     UsersModule,
     AuthModule,
+    RoomsModule,
   ],
   providers: [
     {

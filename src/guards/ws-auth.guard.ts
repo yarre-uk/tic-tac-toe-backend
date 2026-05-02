@@ -18,6 +18,10 @@ import type { UserPayload } from '@/modules/auth/auth.service';
 // wherever we read or write socket-level state.
 export interface SocketData {
   user: UserPayload;
+  // The raw JWT stored here after first verification so the guard can re-verify
+  // it on every message. When auth:refresh runs, both token and user are replaced,
+  // so expiry is always caught on the next message regardless of which token is active.
+  token: string;
 }
 
 @Injectable()
@@ -30,28 +34,12 @@ export class WsAuthGuard implements CanActivate {
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const client: Socket = context.switchToWs().getClient<Socket>();
-    const existing = (client.data as SocketData).user;
+    const data = client.data as SocketData;
 
-    if (existing) {
-      // The token was already verified for this connection (either on the first
-      // message or via auth:refresh in AuthGateway). Skip re-verification and
-      // only run the blacklist check — this catches logouts without re-parsing
-      // the JWT on every single message.
-      const isBlacklisted = await this.redis.exists(
-        `blacklist:${existing.jti}`,
-      );
-
-      if (isBlacklisted) {
-        throw new WsException('Token has been revoked');
-      }
-
-      return true;
-    }
-
-    // First authenticated message on this socket — verify the handshake token
-    // and write the payload into client.data so subsequent messages take the
-    // fast path above.
-    const token = this.extractToken(client);
+    // Resolve the token to verify: prefer the one stored in client.data because
+    // it may have been updated by auth:refresh. Fall back to the handshake token
+    // on the first message when client.data.token hasn't been written yet.
+    const token = data.token ?? this.extractToken(client);
 
     if (!isDefined(token)) {
       throw new WsException('No token provided');
@@ -60,6 +48,8 @@ export class WsAuthGuard implements CanActivate {
     let payload: UserPayload;
 
     try {
+      // Re-verify on every message so token expiry is always caught, regardless
+      // of whether auth:refresh has run or not.
       payload = this.jwtService.verify<UserPayload>(token);
     } catch {
       throw new WsException('Token is invalid or expired');
@@ -71,7 +61,11 @@ export class WsAuthGuard implements CanActivate {
       throw new WsException('Token has been revoked');
     }
 
-    (client.data as SocketData).user = payload;
+    // Write (or refresh) both the token string and the decoded payload.
+    // auth:refresh in AuthGateway does the same write, so after a token swap
+    // the next message here picks up the new token from client.data.token.
+    data.token = token;
+    data.user = payload;
 
     return true;
   }

@@ -12,6 +12,7 @@ import Redis from 'ioredis';
 import { REDIS_CLIENT_KEY } from '@/libs/redis/redis.module';
 import { SocketData } from '@/guards';
 import type { UserPayload } from './auth.service';
+import { isDefined } from '@/utils';
 
 // This gateway lives on the same namespace as RoomsGateway ('/ws').
 // NestJS merges all gateways that share a namespace onto the same Socket.IO
@@ -55,7 +56,7 @@ export class AuthGateway {
     // Strip the "Bearer " prefix if the client sends it that way.
     const raw = body?.token?.replace('Bearer ', '').trim();
 
-    if (!raw) {
+    if (!isDefined(raw)) {
       throw new WsException('No token provided');
     }
 
@@ -75,9 +76,12 @@ export class AuthGateway {
       throw new WsException('Token has been revoked');
     }
 
-    // Overwrite the stored payload with the fresh one.
-    // @WsUser() and any code reading client.data will now see the updated user.
-    (client.data as SocketData).user = payload;
+    // Overwrite both the stored token string and the decoded payload.
+    // WsAuthGuard reads client.data.token on every subsequent message, so after
+    // this write the guard will verify the new token and catch its expiry too.
+    const data = client.data as SocketData;
+    data.token = raw;
+    data.user = payload;
 
     return { event: 'auth:refreshed' };
   }

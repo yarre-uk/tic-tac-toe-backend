@@ -17,6 +17,7 @@ import { RoomResponseDto } from './dto';
 import { CreateRoomDto } from './dto';
 import { UpdateRoomDto } from './dto';
 import { isDefined } from '@/utils';
+import { SocketEvent } from '@/constants';
 
 const TIME_BEFORE_AUTO_LEAVE = 60 * 1000;
 
@@ -65,7 +66,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
           if (isDefined(result) && isDefined(roomId)) {
             this.server
               .to(roomId)
-              .emit('room:updated', RoomResponseDto.from(result));
+              .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(result));
           }
         })
         .catch(() => {});
@@ -74,7 +75,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     this.pendingLeaves.set(user.sub, timer);
   }
 
-  @SubscribeMessage('room:create')
+  @SubscribeMessage(SocketEvent.Rooms.CREATE)
   async handleCreate(
     @WsUser() user: UserPayload,
     @MessageBody() dto: CreateRoomDto,
@@ -86,10 +87,13 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     await client.join(room.id);
 
-    return { event: 'room:created', data: RoomResponseDto.from(room) };
+    return {
+      event: SocketEvent.Rooms.CREATED,
+      data: RoomResponseDto.from(room),
+    };
   }
 
-  @SubscribeMessage('room:join')
+  @SubscribeMessage(SocketEvent.Rooms.JOIN)
   async handleJoin(
     @WsUser() user: UserPayload,
     @MessageBody() body: { roomId: string },
@@ -109,19 +113,24 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       // Shortened version of server.to(room.id).except(client.id).emit()
       client
         .to(leftRoom.id)
-        .emit('room:updated', RoomResponseDto.from(leftRoom));
+        .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(leftRoom));
     }
 
     await client.join(newRoom.id);
 
     // Notify the other player in the room. client.to() excludes the sender.
     // Shortened version of server.to(room.id).except(client.id).emit()
-    client.to(newRoom.id).emit('room:updated', RoomResponseDto.from(newRoom));
+    client
+      .to(newRoom.id)
+      .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(newRoom));
 
-    return { event: 'room:joined', data: RoomResponseDto.from(newRoom) };
+    return {
+      event: SocketEvent.Rooms.JOINED,
+      data: RoomResponseDto.from(newRoom),
+    };
   }
 
-  @SubscribeMessage('room:leave')
+  @SubscribeMessage(SocketEvent.Rooms.LEAVE)
   async handleLeave(
     @WsUser() user: UserPayload,
     @ConnectedSocket() client: Socket,
@@ -140,13 +149,13 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     if (isDefined(result) && isDefined(currentRoomId)) {
       this.server
         .to(currentRoomId)
-        .emit('room:updated', RoomResponseDto.from(result));
+        .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(result));
     }
 
-    return { event: 'room:left' };
+    return { event: SocketEvent.Rooms.LEFT };
   }
 
-  @SubscribeMessage('room:update')
+  @SubscribeMessage(SocketEvent.Rooms.UPDATE)
   async handleUpdate(
     @WsUser() user: UserPayload,
     @MessageBody() body: { roomId: string; data: UpdateRoomDto },
@@ -161,8 +170,13 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     // Notify the other player in the room. client.to() excludes the sender.
     // Shortened version of server.to(room.id).except(client.id).emit()
-    client.to(room.id).emit('room:updated', RoomResponseDto.from(room));
+    client
+      .to(room.id)
+      .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(room));
 
-    return { event: 'room:updated', data: RoomResponseDto.from(room) };
+    return {
+      event: SocketEvent.Rooms.UPDATED,
+      data: RoomResponseDto.from(room),
+    };
   }
 }

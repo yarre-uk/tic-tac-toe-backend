@@ -13,6 +13,7 @@ import { REDIS_CLIENT_KEY } from '@/libs/redis/redis.module';
 import { SocketData } from '@/guards';
 import type { UserPayload } from './auth.service';
 import { isDefined } from '@/utils';
+import { SocketEvent } from '@/constants';
 
 @WebSocketGateway({ namespace: '/ws', cors: { origin: '*' } })
 export class AuthGateway {
@@ -21,7 +22,7 @@ export class AuthGateway {
     @Inject(REDIS_CLIENT_KEY) private readonly redis: Redis,
   ) {}
 
-  @SubscribeMessage('auth:refresh')
+  @SubscribeMessage(SocketEvent.Auth.AUTH_REFRESH)
   async handleRefresh(
     @ConnectedSocket() client: Socket,
     @MessageBody() body: { token: string },
@@ -50,6 +51,6 @@ export class AuthGateway {
     data.token = raw;
     data.user = payload;
 
-    return { event: 'auth:refreshed' };
+    return { event: SocketEvent.Auth.AUTH_REFRESHED };
   }
 }

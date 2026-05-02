@@ -29,16 +29,31 @@ export class WsAuthGuard implements CanActivate {
   ) {}
 
   async canActivate(context: ExecutionContext): Promise<boolean> {
-    // WebSocket context is different from HTTP.
-    // Instead of switchToHttp(), we use switchToWs() to get the socket client.
     const client: Socket = context.switchToWs().getClient<Socket>();
+    const existing = (client.data as SocketData).user;
 
+    if (existing) {
+      // The token was already verified for this connection (either on the first
+      // message or via auth:refresh in AuthGateway). Skip re-verification and
+      // only run the blacklist check — this catches logouts without re-parsing
+      // the JWT on every single message.
+      const isBlacklisted = await this.redis.exists(
+        `blacklist:${existing.jti}`,
+      );
+
+      if (isBlacklisted) {
+        throw new WsException('Token has been revoked');
+      }
+
+      return true;
+    }
+
+    // First authenticated message on this socket — verify the handshake token
+    // and write the payload into client.data so subsequent messages take the
+    // fast path above.
     const token = this.extractToken(client);
 
     if (!isDefined(token)) {
-      // WsException is the WebSocket equivalent of HttpException.
-      // NestJS serialises it and emits it back to the client as an 'exception' event
-      // instead of returning an HTTP 4xx response.
       throw new WsException('No token provided');
     }
 
@@ -50,18 +65,12 @@ export class WsAuthGuard implements CanActivate {
       throw new WsException('Token is invalid or expired');
     }
 
-    // Same blacklist check as the HTTP guard — a logged-out token must not work
-    // over WebSockets either.
     const isBlacklisted = await this.redis.exists(`blacklist:${payload.jti}`);
 
     if (isBlacklisted) {
       throw new WsException('Token has been revoked');
     }
 
-    // Attach the decoded payload to the socket's data bag so that any handler
-    // or decorator can read it later via client.data.user.
-    // This is the WS equivalent of request['user'] = payload in JwtAuthGuard.
-    // We cast to SocketData to avoid the `any` type that Socket.IO gives client.data.
     (client.data as SocketData).user = payload;
 
     return true;

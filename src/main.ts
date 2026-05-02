@@ -58,7 +58,7 @@ async function bootstrap() {
   console.log(
     `Swagger is running on: http://localhost:${PORT}/${SWAGGER_ROUTE}`,
   );
-  console.log(`WebSocket gateway available at: ws://localhost:${PORT}/rooms`);
+  console.log(`WebSocket gateway available at: ws://localhost:${PORT}/ws`);
 }
 
 void bootstrap();

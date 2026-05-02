@@ -16,6 +16,7 @@ import { RoomsService } from './rooms.service';
 import { RoomResponseDto } from './dto';
 import { CreateRoomDto } from './dto';
 import { UpdateRoomDto } from './dto';
+import { isDefined } from 'class-validator';
 
 // @WebSocketGateway spins up a Socket.IO server alongside the existing HTTP server.
 //
@@ -28,7 +29,8 @@ import { UpdateRoomDto } from './dto';
 //
 // cors.origin: '*' — allow any origin during development. In production restrict this
 // to your actual frontend domain.
-@WebSocketGateway({ namespace: '/rooms', cors: { origin: '*' } })
+// TODO restrict to frontend domain
+@WebSocketGateway({ namespace: '/ws', cors: { origin: '*' } })
 // @UseGuards at the class level applies WsAuthGuard to every @SubscribeMessage handler
 // defined below. It does NOT apply to handleConnection / handleDisconnect — those are
 // lifecycle hooks, not message handlers, and guards don't intercept them.
@@ -40,7 +42,23 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   server!: Server;
 
+  // Tracks users who disconnected but haven't been removed from their room yet.
+  // Keyed by userId so that a reconnecting client cancels their own timer.
+  // This gives the client a window to reload the page without losing their room slot.
+  private readonly pendingLeaves = new Map<string, NodeJS.Timeout>();
+
   constructor(private readonly roomsService: RoomsService) {}
+
+  // Cancels a scheduled room-leave for the given user.
+  // Called at the start of every room event handler so that a reconnecting
+  // client immediately reclaims their slot without waiting for the timer to fire.
+  private cancelPendingLeave(userId: string): void {
+    const timer = this.pendingLeaves.get(userId);
+    if (timer) {
+      clearTimeout(timer);
+      this.pendingLeaves.delete(userId);
+    }
+  }
 
   // Called automatically the moment any client opens a WebSocket connection.
   // At this point no guard has run yet — we don't know who the user is.
@@ -55,34 +73,39 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   //
   // This is the right place to do cleanup so a crashed client doesn't leave a ghost
   // player stuck in a room forever.
-  async handleDisconnect(client: Socket) {
+  handleDisconnect(client: Socket) {
     console.log(`[RoomsGateway] Client disconnected: ${client.id}`);
 
-    // client.data.user is written by WsAuthGuard the first time the client sends an
-    // authenticated message. If the client disconnected without ever authenticating,
-    // client.data.user is undefined and there's nothing to clean up.
     const user = (client.data as SocketData).user;
-    if (!user) {
+    if (!isDefined(user)) {
       return;
     }
 
-    try {
-      const result = await this.roomsService.leave(user.sub);
+    // Capture the room channel now — client.rooms is cleared once the socket closes.
+    const roomId = [...client.rooms].find((r) => r !== client.id);
 
-      // leave() returns the updated room if it still exists (other player is still there),
-      // or null/void if the room was deleted (user was the last player).
-      // If the room still has a player, tell them the room went back to Waiting.
-      // leave() returns null when the room was deleted (user was the last player).
-      // Only broadcast when the room still exists and has a remaining player.
-      if (result) {
-        this.server
-          .to(result.id)
-          .emit('room:updated', RoomResponseDto.from(result));
-      }
-    } catch {
-      // leave() throws BadRequestException when the user wasn't in any room.
-      // That's perfectly normal on disconnect — swallow it.
-    }
+    // Instead of leaving immediately, wait 60 seconds.
+    // This gives the client time to reload the page and reconnect without losing
+    // their room slot. If they send any room event within that window,
+    // cancelPendingLeave() cancels the timer and they stay in the room.
+    const timer = setTimeout(() => {
+      this.pendingLeaves.delete(user.sub);
+
+      void this.roomsService
+        .leave(user.sub)
+        .then((result) => {
+          if (result && roomId) {
+            this.server
+              .to(roomId)
+              .emit('room:updated', RoomResponseDto.from(result));
+          }
+        })
+        .catch(() => {
+          // User wasn't in a room — nothing to clean up.
+        });
+    }, 60_000);
+
+    this.pendingLeaves.set(user.sub, timer);
   }
 
   // ─── Event handlers ──────────────────────────────────────────────────────────
@@ -115,6 +138,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // socket-level methods like client.join() to subscribe to a channel.
     @ConnectedSocket() client: Socket,
   ) {
+    this.cancelPendingLeave(user.sub);
     const room = await this.roomsService.create(user.sub, dto);
 
     // Join the Socket.IO room channel named after the Postgres room ID.
@@ -138,6 +162,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @MessageBody() body: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
+    this.cancelPendingLeave(user.sub);
     const room = await this.roomsService.join(user.sub, body.roomId);
 
     // Subscribe this socket to the room's broadcast channel.
@@ -165,6 +190,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     // making it impossible to know which Socket.IO channel to unsubscribe from later.
     // We read it from the socket's current rooms set (the client joined it on create/join).
     // Socket.IO always adds the socket's own id as a room, so filter it out.
+    this.cancelPendingLeave(user.sub);
     const currentRoomId = [...client.rooms].find((r) => r !== client.id);
 
     const result = await this.roomsService.leave(user.sub);
@@ -193,6 +219,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     @WsUser() user: UserPayload,
     @MessageBody() body: { roomId: string; data: UpdateRoomDto },
   ) {
+    this.cancelPendingLeave(user.sub);
     const room = await this.roomsService.update(
       user.sub,
       body.roomId,

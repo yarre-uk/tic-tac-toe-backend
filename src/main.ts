@@ -1,5 +1,6 @@
 import { NestFactory } from '@nestjs/core';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { IoAdapter } from '@nestjs/platform-socket.io';
 import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import cookieParser from 'cookie-parser';
@@ -15,6 +16,10 @@ async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
 
   app.set('trust proxy', 1);
+
+  // Tell NestJS to use Socket.IO instead of the default ws adapter.
+  // Without this, @WebSocketGateway decorators are silently ignored.
+  app.useWebSocketAdapter(new IoAdapter(app));
 
   const helmetMiddleware = helmet();
   app.use((req: Request, res: Response, next: NextFunction) => {
@@ -53,6 +58,7 @@ async function bootstrap() {
   console.log(
     `Swagger is running on: http://localhost:${PORT}/${SWAGGER_ROUTE}`,
   );
+  console.log(`WebSocket gateway available at: ws://localhost:${PORT}/rooms`);
 }
 
 void bootstrap();

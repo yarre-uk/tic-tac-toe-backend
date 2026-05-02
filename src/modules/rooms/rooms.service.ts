@@ -120,7 +120,8 @@ export class RoomsService {
     const remaining = room.players.filter((p) => p.id !== userId);
 
     if (remaining.length === 0) {
-      return tx.room.delete({ where: { id: roomId } });
+      await tx.room.delete({ where: { id: roomId } });
+      return null;
     }
 
     return tx.room.update({

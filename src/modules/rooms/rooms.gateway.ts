@@ -7,7 +7,7 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { UseGuards } from '@nestjs/common';
+import { Logger, UseGuards } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
 import { WsAuthGuard, SocketData } from '@/guards';
 import { WsUser } from '@/decorators';
@@ -16,192 +16,128 @@ import { RoomsService } from './rooms.service';
 import { RoomResponseDto } from './dto';
 import { CreateRoomDto } from './dto';
 import { UpdateRoomDto } from './dto';
-import { isDefined } from 'class-validator';
+import { isDefined } from '@/utils';
 
-// @WebSocketGateway spins up a Socket.IO server alongside the existing HTTP server.
-//
-// namespace: '/rooms' — all events in this gateway are scoped to this path.
-// Clients connect with:
-//   const socket = io('http://localhost:3000/rooms', { auth: { token: 'Bearer ...' } })
-//
-// Without a namespace you'd use the default '/' namespace, which works but mixes
-// all your gateways together. Namespacing keeps concerns separate.
-//
-// cors.origin: '*' — allow any origin during development. In production restrict this
-// to your actual frontend domain.
+const TIME_BEFORE_AUTO_LEAVE = 60 * 1000;
+
 // TODO restrict to frontend domain
 @WebSocketGateway({ namespace: '/ws', cors: { origin: '*' } })
-// @UseGuards at the class level applies WsAuthGuard to every @SubscribeMessage handler
-// defined below. It does NOT apply to handleConnection / handleDisconnect — those are
-// lifecycle hooks, not message handlers, and guards don't intercept them.
 @UseGuards(WsAuthGuard)
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
-  // @WebSocketServer injects the Socket.IO Server instance for this namespace.
-  // We use it to broadcast events to all sockets in a given Socket.IO room channel,
-  // not just the sender.
   @WebSocketServer()
-  server!: Server;
+  private server!: Server;
+  private logger = new Logger('RoomsGateway');
 
-  // Tracks users who disconnected but haven't been removed from their room yet.
-  // Keyed by userId so that a reconnecting client cancels their own timer.
-  // This gives the client a window to reload the page without losing their room slot.
   private readonly pendingLeaves = new Map<string, NodeJS.Timeout>();
 
   constructor(private readonly roomsService: RoomsService) {}
 
-  // Cancels a scheduled room-leave for the given user.
-  // Called at the start of every room event handler so that a reconnecting
-  // client immediately reclaims their slot without waiting for the timer to fire.
   private cancelPendingLeave(userId: string): void {
     const timer = this.pendingLeaves.get(userId);
-    if (timer) {
+
+    if (isDefined(timer)) {
       clearTimeout(timer);
       this.pendingLeaves.delete(userId);
     }
   }
 
-  // Called automatically the moment any client opens a WebSocket connection.
-  // At this point no guard has run yet — we don't know who the user is.
-  // We allow the connection to proceed; unauthenticated clients simply cannot
-  // trigger any @SubscribeMessage handler because WsAuthGuard will block them.
   handleConnection(client: Socket) {
-    console.log(`[RoomsGateway] Client connected: ${client.id}`);
+    this.logger.log(`Client connected: ${client.id}`);
   }
 
-  // Called automatically when a client disconnects — intentionally (client calls
-  // socket.disconnect()) or unintentionally (tab close, network drop, process crash).
-  //
-  // This is the right place to do cleanup so a crashed client doesn't leave a ghost
-  // player stuck in a room forever.
   handleDisconnect(client: Socket) {
-    console.log(`[RoomsGateway] Client disconnected: ${client.id}`);
+    this.logger.log(`Client disconnected: ${client.id}`);
 
     const user = (client.data as SocketData).user;
     if (!isDefined(user)) {
       return;
     }
 
-    // Capture the room channel now — client.rooms is cleared once the socket closes.
-    const roomId = [...client.rooms].find((r) => r !== client.id);
+    // Socket.IO always adds the socket's own id as a room, so filter it out.
+    const roomId = [...client.rooms].find((room) => room !== client.id);
 
-    // Instead of leaving immediately, wait 60 seconds.
-    // This gives the client time to reload the page and reconnect without losing
-    // their room slot. If they send any room event within that window,
-    // cancelPendingLeave() cancels the timer and they stay in the room.
     const timer = setTimeout(() => {
       this.pendingLeaves.delete(user.sub);
 
       void this.roomsService
         .leave(user.sub)
         .then((result) => {
-          if (result && roomId) {
+          if (isDefined(result) && isDefined(roomId)) {
             this.server
               .to(roomId)
               .emit('room:updated', RoomResponseDto.from(result));
           }
         })
-        .catch(() => {
-          // User wasn't in a room — nothing to clean up.
-        });
-    }, 60_000);
+        .catch(() => {});
+    }, TIME_BEFORE_AUTO_LEAVE);
 
     this.pendingLeaves.set(user.sub, timer);
   }
 
-  // ─── Event handlers ──────────────────────────────────────────────────────────
-  //
-  // Each @SubscribeMessage('event:name') method handles one client → server event.
-  //
-  // The return value is sent back ONLY to the sender as an acknowledgment.
-  // This is Socket.IO's "ack" mechanism — the client can pass a callback as the
-  // last argument to socket.emit() and it will receive the return value:
-  //
-  //   socket.emit('room:create', { name: 'my-room' }, (response) => {
-  //     console.log(response); // { event: 'room:created', data: { id: '...', ... } }
-  //   })
-  //
-  // To broadcast to multiple clients, use this.server.to(roomId).emit(...) instead.
-  // ─────────────────────────────────────────────────────────────────────────────
-
-  // room:create — player wants to open a new room.
-  //
-  // After creation the creator is placed in the Socket.IO room channel so they
-  // receive future broadcasts (opponent joining, room updates, etc.).
   @SubscribeMessage('room:create')
   async handleCreate(
-    // @WsUser() reads client.data.user that WsAuthGuard wrote — same idea as
-    // @User() in HTTP controllers but adapted for WebSocket context.
     @WsUser() user: UserPayload,
-    // @MessageBody() deserialises the payload the client sent with the event.
     @MessageBody() dto: CreateRoomDto,
-    // @ConnectedSocket() gives us the raw Socket instance so we can call
-    // socket-level methods like client.join() to subscribe to a channel.
     @ConnectedSocket() client: Socket,
   ) {
     this.cancelPendingLeave(user.sub);
+
     const room = await this.roomsService.create(user.sub, dto);
 
-    // Join the Socket.IO room channel named after the Postgres room ID.
-    // From this point on, this.server.to(room.id).emit(...) will reach this client.
     await client.join(room.id);
 
-    // Return the new room to the creator as an ack.
     return { event: 'room:created', data: RoomResponseDto.from(room) };
   }
 
-  // room:join — player wants to enter an existing room.
-  //
-  // If the player is already in another room, RoomsService.join() automatically
-  // leaves it first (the auto-leave logic lives in the service layer, not here).
-  // After joining we broadcast to everyone in the room so the waiting player knows
-  // their opponent arrived.
   @SubscribeMessage('room:join')
   async handleJoin(
     @WsUser() user: UserPayload,
-    // The client sends just the room ID: socket.emit('room:join', { roomId: '...' })
     @MessageBody() body: { roomId: string },
     @ConnectedSocket() client: Socket,
   ) {
     this.cancelPendingLeave(user.sub);
-    const room = await this.roomsService.join(user.sub, body.roomId);
 
-    // Subscribe this socket to the room's broadcast channel.
-    await client.join(room.id);
+    const [newRoom, leftRoom] = await this.roomsService.join(
+      user.sub,
+      body.roomId,
+    );
 
-    // Broadcast the updated room to ALL sockets in the channel — both the joiner
-    // and the player who was already waiting see the same 'room:updated' event.
-    // this.server.to(id) targets every socket in that Socket.IO room, including sender.
-    this.server.to(room.id).emit('room:updated', RoomResponseDto.from(room));
+    if (isDefined(leftRoom)) {
+      await client.leave(leftRoom.id);
 
-    // Still send an ack back to the joiner so they know the operation succeeded.
-    return { event: 'room:joined', data: RoomResponseDto.from(room) };
+      // Notify the other player in the room. client.to() excludes the sender.
+      // Shortened version of server.to(room.id).except(client.id).emit()
+      client
+        .to(leftRoom.id)
+        .emit('room:updated', RoomResponseDto.from(leftRoom));
+    }
+
+    await client.join(newRoom.id);
+
+    // Notify the other player in the room. client.to() excludes the sender.
+    // Shortened version of server.to(room.id).except(client.id).emit()
+    client.to(newRoom.id).emit('room:updated', RoomResponseDto.from(newRoom));
+
+    return { event: 'room:joined', data: RoomResponseDto.from(newRoom) };
   }
 
-  // room:leave — player voluntarily leaves their current room.
-  //
-  // If they were the owner and another player is present, ownership is transferred.
-  // If they were the last player, the room is deleted.
   @SubscribeMessage('room:leave')
   async handleLeave(
     @WsUser() user: UserPayload,
     @ConnectedSocket() client: Socket,
   ) {
-    // We capture the roomId before leaving because the service may delete the room,
-    // making it impossible to know which Socket.IO channel to unsubscribe from later.
-    // We read it from the socket's current rooms set (the client joined it on create/join).
-    // Socket.IO always adds the socket's own id as a room, so filter it out.
     this.cancelPendingLeave(user.sub);
+
+    // Socket.IO always adds the socket's own id as a room, so filter it out.
     const currentRoomId = [...client.rooms].find((r) => r !== client.id);
 
     const result = await this.roomsService.leave(user.sub);
 
-    // Unsubscribe from the channel so this client no longer receives broadcasts.
-    if (currentRoomId) {
+    if (isDefined(currentRoomId)) {
       await client.leave(currentRoomId);
     }
 
-    if (result && currentRoomId) {
-      // The room still exists — notify the remaining player that it's now Waiting.
+    if (isDefined(result) && isDefined(currentRoomId)) {
       this.server
         .to(currentRoomId)
         .emit('room:updated', RoomResponseDto.from(result));
@@ -210,14 +146,11 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     return { event: 'room:left' };
   }
 
-  // room:update — room owner changes the room name.
-  //
-  // Only the owner can do this (enforced in RoomsService.update).
-  // Broadcast the change to everyone in the room.
   @SubscribeMessage('room:update')
   async handleUpdate(
     @WsUser() user: UserPayload,
     @MessageBody() body: { roomId: string; data: UpdateRoomDto },
+    @ConnectedSocket() client: Socket,
   ) {
     this.cancelPendingLeave(user.sub);
     const room = await this.roomsService.update(
@@ -226,8 +159,9 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       body.data,
     );
 
-    // Broadcast to all sockets in the room channel, including the owner.
-    this.server.to(room.id).emit('room:updated', RoomResponseDto.from(room));
+    // Notify the other player in the room. client.to() excludes the sender.
+    // Shortened version of server.to(room.id).except(client.id).emit()
+    client.to(room.id).emit('room:updated', RoomResponseDto.from(room));
 
     return { event: 'room:updated', data: RoomResponseDto.from(room) };
   }

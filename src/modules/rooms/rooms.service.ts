@@ -7,7 +7,11 @@ import {
 import { Prisma } from '@/generated/prisma/client';
 import { RoomStatus } from '@/generated/prisma/enums';
 import { PrismaService } from '@/libs';
-import { PlayerQuerySelection, RoomRepository } from '@/repositories';
+import {
+  PlayerQuerySelection,
+  RoomRepository,
+  RoomWithPlayers,
+} from '@/repositories';
 import { CreateRoomDto, UpdateRoomDto } from './dto';
 import { isDefined } from '@/utils';
 
@@ -48,7 +52,10 @@ export class RoomsService {
     });
   }
 
-  async join(userId: string, roomId: string) {
+  async join(
+    userId: string,
+    roomId: string,
+  ): Promise<[RoomWithPlayers, RoomWithPlayers | null]> {
     const room = await this.findOne(roomId);
 
     if (room.players.some((p) => p.id === userId)) {
@@ -62,8 +69,10 @@ export class RoomsService {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
 
     return this.prisma.$transaction(async (tx) => {
+      let leftRoom: RoomWithPlayers | null = null;
+
       if (isDefined(user?.roomId)) {
-        await this.leaveRoom(userId, user.roomId, tx);
+        leftRoom = await this.leaveRoom(userId, user.roomId, tx);
       }
 
       const updatedRoom = await tx.room.update({
@@ -77,7 +86,7 @@ export class RoomsService {
         include: { players: { select: PlayerQuerySelection } },
       });
 
-      return updatedRoom;
+      return [updatedRoom, leftRoom];
     });
   }
 

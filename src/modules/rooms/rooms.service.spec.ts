@@ -232,9 +232,6 @@ describe('RoomsService', () => {
         roomId: OLD_ROOM_ID,
       });
 
-      // Old room has two players: PLAYER_ID (leaving) and ownerPlayer (stays).
-      // After filtering out PLAYER_ID, remaining = [ownerPlayer], so the room
-      // is updated (not deleted) and leaveRoom returns the updated room.
       mockTx.room.findUnique.mockResolvedValue({
         ...waitingRoom,
         id: OLD_ROOM_ID,
@@ -242,7 +239,6 @@ describe('RoomsService', () => {
         players: [secondPlayer, ownerPlayer],
       });
 
-      // leaveRoom calls tx.room.update first (old room), join calls it second (new room)
       const updatedOldRoom = {
         ...waitingRoom,
         id: OLD_ROOM_ID,

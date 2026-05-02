@@ -190,13 +190,14 @@ describe('RoomsService', () => {
       const joined = { ...emptyWaiting, players: [ownerPlayer] };
       mockTx.room.update.mockResolvedValue(joined);
 
-      const result = await service.join(OWNER_ID, ROOM_ID);
+      const [result, leftRoom] = await service.join(OWNER_ID, ROOM_ID);
 
       const [[firstCall]] = mockTx.room.update.mock.calls as [
         { data: { status?: unknown } },
       ][];
       expect(firstCall.data.status).toBeUndefined();
       expect(result).toEqual(joined);
+      expect(leftRoom).toBeNull();
     });
 
     it('should set status to Playing when the room reaches MAX_PLAYERS', async () => {
@@ -214,13 +215,14 @@ describe('RoomsService', () => {
       };
       mockTx.room.update.mockResolvedValue(joined);
 
-      const result = await service.join(PLAYER_ID, ROOM_ID);
+      const [result, leftRoom] = await service.join(PLAYER_ID, ROOM_ID);
 
       const [[joinCall]] = mockTx.room.update.mock.calls as [
         { data: { status?: RoomStatus } },
       ][];
       expect(joinCall.data.status).toBe(RoomStatus.Playing);
       expect(result).toEqual(joined);
+      expect(leftRoom).toBeNull();
     });
 
     it('should leave old room first when user is already in one', async () => {
@@ -230,24 +232,39 @@ describe('RoomsService', () => {
         roomId: OLD_ROOM_ID,
       });
 
-      // old room has only the user — gets deleted
+      // Old room has two players: PLAYER_ID (leaving) and ownerPlayer (stays).
+      // After filtering out PLAYER_ID, remaining = [ownerPlayer], so the room
+      // is updated (not deleted) and leaveRoom returns the updated room.
       mockTx.room.findUnique.mockResolvedValue({
         ...waitingRoom,
         id: OLD_ROOM_ID,
-        ownerId: PLAYER_ID,
-        players: [secondPlayer],
-      });
-      mockTx.room.update.mockResolvedValue({
-        ...waitingRoom,
-        players: [ownerPlayer, secondPlayer],
+        ownerId: OWNER_ID,
+        players: [secondPlayer, ownerPlayer],
       });
 
-      await service.join(PLAYER_ID, ROOM_ID);
+      // leaveRoom calls tx.room.update first (old room), join calls it second (new room)
+      const updatedOldRoom = {
+        ...waitingRoom,
+        id: OLD_ROOM_ID,
+        players: [secondPlayer],
+        status: RoomStatus.Waiting,
+      };
+      const updatedNewRoom = {
+        ...waitingRoom,
+        players: [ownerPlayer, secondPlayer],
+      };
+      mockTx.room.update
+        .mockResolvedValueOnce(updatedOldRoom)
+        .mockResolvedValueOnce(updatedNewRoom);
+
+      const [newRoom, leftRoom] = await service.join(PLAYER_ID, ROOM_ID);
 
       const [[findCall]] = mockTx.room.findUnique.mock.calls as [
         { where: { id: string } },
       ][];
       expect(findCall.where.id).toBe(OLD_ROOM_ID);
+      expect(leftRoom).toEqual(updatedOldRoom);
+      expect(newRoom).toEqual(updatedNewRoom);
     });
   });
 

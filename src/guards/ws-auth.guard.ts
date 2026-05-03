@@ -6,11 +6,12 @@ import {
 } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
-import type { Socket } from 'socket.io';
 import Redis from 'ioredis';
-import { isDefined } from '@/utils';
+import type { Socket } from 'socket.io';
+
 import { REDIS_CLIENT_KEY } from '@/libs/redis/redis.module';
 import type { UserPayload } from '@/modules/auth/auth.service';
+import { isDefined } from '@/utils';
 
 export interface SocketData {
   user: UserPayload;

@@ -1,14 +1,17 @@
 import { Inject, Injectable, UnauthorizedException } from '@nestjs/common';
-import { Role } from '@/generated/prisma/enums';
 import { JwtService } from '@nestjs/jwt';
-import { isDefined } from '@/utils';
-import { v7 as uuidv7 } from 'uuid';
 import { hash, compare } from 'bcrypt';
 import Redis from 'ioredis';
+import { v7 as uuidv7 } from 'uuid';
+
+import { UsersService } from '../users';
+
+import { SignInDto, SignUpDto, ChangePasswordDto } from './dtos';
+
+import { Role } from '@/generated/prisma/enums';
 import { ApiConfigService, PrismaService } from '@/libs';
 import { REDIS_CLIENT_KEY } from '@/libs/redis/redis.module';
-import { UsersService } from '../users';
-import { SignInDto, SignUpDto, ChangePasswordDto } from './dtos';
+import { isDefined } from '@/utils';
 
 interface TokensResponse {
   accessToken: string;
@@ -27,6 +30,7 @@ export interface RefreshTokenPayload {
 }
 
 const DUMMY_PASSWORD_HASH =
+  // eslint-disable-next-line sonarjs/no-hardcoded-passwords
   '$2b$10$N9qo8uLOickgx2ZMRZoMyeIjZAgcfl7p92ldGxad68LJZdL17lhWy';
 
 @Injectable()

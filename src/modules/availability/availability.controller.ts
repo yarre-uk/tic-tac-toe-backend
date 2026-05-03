@@ -5,9 +5,11 @@ import {
   ApiQuery,
   ApiTags,
 } from '@nestjs/swagger';
-import { IsPublic } from '@/guards';
+
 import { AvailabilityService } from './availability.service';
 import { AvailabilityResponseDto } from './dto/availability-response.dto';
+
+import { IsPublic } from '@/guards';
 
 @ApiTags('Availability')
 @IsPublic()

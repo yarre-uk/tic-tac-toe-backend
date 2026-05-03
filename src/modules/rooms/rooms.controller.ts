@@ -5,8 +5,9 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { RoomsService } from './rooms.service';
+
 import { RoomResponseDto } from './dto';
+import { RoomsService } from './rooms.service';
 
 @ApiTags('Rooms')
 @ApiBearerAuth()

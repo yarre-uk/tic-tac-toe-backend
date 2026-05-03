@@ -25,7 +25,7 @@ export class LoggingInterceptor<T> implements NestInterceptor<T, Response<T>> {
 
     const startedAt = Date.now();
 
-    return next.handle().pipe(
+    return next.handle().pipe<Response<T>>(
       tap({
         next: () => {
           const duration = Date.now() - startedAt;

@@ -1,10 +1,13 @@
 import { Module } from '@nestjs/common';
-import { UsersModule } from '../users';
+
 import { AvailabilityModule } from '../availability';
-import { AuthService } from './auth.service';
+import { UsersModule } from '../users';
+
 import { AuthController } from './auth.controller';
 import { AuthGateway } from './auth.gateway';
+import { AuthService } from './auth.service';
 import { SessionsController } from './sessions.controller';
+
 import { GoogleStrategy } from '@/guards/strategies';
 
 @Module({

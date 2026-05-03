@@ -1,14 +1,17 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import { UsersService } from './users.service';
+
 import { Prisma } from '@/generated/prisma/client';
 import { Role } from '@/generated/prisma/enums';
 import { AppEvents } from '@/libs';
-import { UsersService } from './users.service';
-import { UserRepository } from '@/repositories';
 import { TypedEventEmitter } from '@/libs';
+import { UserRepository } from '@/repositories';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

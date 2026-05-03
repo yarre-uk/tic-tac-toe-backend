@@ -1,6 +1,7 @@
 import { Global, Module } from '@nestjs/common';
-import { TypedEventEmitter } from './typed-event-emitter';
 import { EventEmitterModule } from '@nestjs/event-emitter';
+
+import { TypedEventEmitter } from './typed-event-emitter';
 
 @Global()
 @Module({

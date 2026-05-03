@@ -1,7 +1,9 @@
-import { createParamDecorator, ExecutionContext } from '@nestjs/common';
+import type { ExecutionContext } from '@nestjs/common';
+import { createParamDecorator } from '@nestjs/common';
 import type { Socket } from 'socket.io';
+
+import type { SocketData } from '@/guards';
 import type { UserPayload } from '@/modules';
-import { SocketData } from '@/guards';
 
 export const WsUser = createParamDecorator(
   (_: unknown, ctx: ExecutionContext): UserPayload => {

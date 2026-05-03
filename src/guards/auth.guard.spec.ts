@@ -1,10 +1,13 @@
-import { ExecutionContext, UnauthorizedException } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
-import { Reflector } from '@nestjs/core';
+import type { ExecutionContext } from '@nestjs/common';
+import { UnauthorizedException } from '@nestjs/common';
+import type { Reflector } from '@nestjs/core';
+import type { JwtService } from '@nestjs/jwt';
+import type Redis from 'ioredis';
+
 import { JwtAuthGuard } from './auth.guard';
+
 import { Role } from '@/generated/prisma/enums';
 import type { UserPayload } from '@/modules/auth/auth.service';
-import Redis from 'ioredis';
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -78,7 +81,7 @@ describe('JwtAuthGuard', () => {
 
   describe('when no Authorization header is present', () => {
     it('should throw UnauthorizedException', async () => {
-      const { ctx } = createContext(undefined);
+      const { ctx } = createContext();
 
       await expect(guard.canActivate(ctx)).rejects.toThrow(
         new UnauthorizedException('No token provided!'),

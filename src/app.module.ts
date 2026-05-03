@@ -1,10 +1,14 @@
 import { Module } from '@nestjs/common';
-import { JwtModule } from '@nestjs/jwt';
 import { APP_FILTER, APP_GUARD, APP_INTERCEPTOR } from '@nestjs/core';
+import { JwtModule } from '@nestjs/jwt';
+import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
+
+import { AppController } from './app.controller';
+import { GlobalExceptionFilter } from './exceptions/exception.filter';
+import { JwtAuthGuard, RolesGuard } from './guards';
 import { LoggingInterceptor } from './interceptors/logging.interceptor';
 import { TransformInterceptor } from './interceptors/transform.interceptor';
-import { GlobalExceptionFilter } from './exceptions/exception.filter';
 import {
   ApiConfigModule,
   ApiConfigService,
@@ -12,10 +16,7 @@ import {
   PrismaModule,
   RedisModule,
 } from './libs';
-import { ScheduleModule } from '@nestjs/schedule';
-import { AppController } from './app.controller';
 import { AuthModule, UsersModule, RoomsModule } from './modules';
-import { JwtAuthGuard, RolesGuard } from './guards';
 
 @Module({
   imports: [

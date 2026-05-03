@@ -5,9 +5,12 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { UsersService } from './users.service';
-import { UpdateUserDto, UserLike, UserResponseDto } from './dto';
+
 import type { UserPayload } from '../auth';
+
+import { UpdateUserDto, UserLike, UserResponseDto } from './dto';
+import { UsersService } from './users.service';
+
 import { User } from '@/decorators';
 
 @ApiTags('Users')

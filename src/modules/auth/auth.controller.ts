@@ -19,18 +19,20 @@ import {
   ApiOperation,
   ApiTags,
 } from '@nestjs/swagger';
-import { AuthService } from './auth.service';
 import type { Request, Response } from 'express';
-import { isDefined } from '@/utils';
-import { ApiConfigService } from '@/libs';
+
+import { AuthService } from './auth.service';
 import {
   ChangePasswordDto,
   SignInDto,
   SignUpDto,
   TokenResponseDto,
 } from './dtos';
-import { GoogleGuard, IsPublic } from '@/guards';
+
 import { User } from '@/generated/prisma/client';
+import { GoogleGuard, IsPublic } from '@/guards';
+import { ApiConfigService } from '@/libs';
+import { isDefined } from '@/utils';
 
 export const REFRESH_TOKEN_KEY = 'refreshToken';
 

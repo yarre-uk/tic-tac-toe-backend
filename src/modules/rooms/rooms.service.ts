@@ -4,6 +4,9 @@ import {
   Injectable,
   NotFoundException,
 } from '@nestjs/common';
+
+import { CreateRoomDto, UpdateRoomDto } from './dto';
+
 import { Prisma } from '@/generated/prisma/client';
 import { RoomStatus } from '@/generated/prisma/enums';
 import { PrismaService } from '@/libs';
@@ -12,7 +15,6 @@ import {
   RoomRepository,
   RoomWithPlayers,
 } from '@/repositories';
-import { CreateRoomDto, UpdateRoomDto } from './dto';
 import { isDefined } from '@/utils';
 
 const MAX_PLAYERS = 2;

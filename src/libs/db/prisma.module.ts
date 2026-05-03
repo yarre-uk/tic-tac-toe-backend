@@ -1,5 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { DynamicModule, Module } from '@nestjs/common';
+
 import { PrismaService } from './prisma.service';
 
 export const PRISMA_OPTIONS_KEY = 'PRISMA_MODULE_OPTIONS_KEY';

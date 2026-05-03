@@ -8,13 +8,15 @@ import {
   ApiTags,
 } from '@nestjs/swagger';
 import type { Request } from 'express';
-import { Role } from '@/generated/prisma/enums';
-import { RequiresRole } from '@/guards';
-import { User } from '@/decorators';
+
+import { REFRESH_TOKEN_KEY } from './auth.controller';
 import { AuthService } from './auth.service';
 import type { UserPayload } from './auth.service';
-import { REFRESH_TOKEN_KEY } from './auth.controller';
 import { SessionResponseDto } from './dtos';
+
+import { User } from '@/decorators';
+import { Role } from '@/generated/prisma/enums';
+import { RequiresRole } from '@/guards';
 
 @ApiTags('Sessions')
 @ApiBearerAuth()

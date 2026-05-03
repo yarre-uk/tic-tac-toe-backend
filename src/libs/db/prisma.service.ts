@@ -5,11 +5,14 @@ import {
   OnModuleDestroy,
   OnModuleInit,
 } from '@nestjs/common';
-import { PrismaClient } from '../../generated/prisma/client';
 import { PrismaPg } from '@prisma/adapter-pg';
-import { delay } from '@/utils';
+
+import { PrismaClient } from '../../generated/prisma/client';
+
 import { PRISMA_OPTIONS_KEY } from './prisma.module';
 import type { PrismaModuleOptions } from './prisma.module';
+
+import { delay } from '@/utils';
 
 @Injectable()
 export class PrismaService

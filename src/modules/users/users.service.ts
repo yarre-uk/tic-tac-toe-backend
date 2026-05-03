@@ -3,13 +3,15 @@ import {
   InternalServerErrorException,
   NotFoundException,
 } from '@nestjs/common';
-import { Prisma } from '@/generated/prisma/client';
-import { Role } from '@/generated/prisma/enums';
-import { isDefined } from '@/utils';
-import { UserRepository } from '@/repositories';
-import { AppEvents, TypedEventEmitter } from '@/libs';
+
 import { CreateUserDto, UpdateUserDto } from './dto';
 import { GoogleUserProfile } from './types';
+
+import { Prisma } from '@/generated/prisma/client';
+import { Role } from '@/generated/prisma/enums';
+import { AppEvents, TypedEventEmitter } from '@/libs';
+import { UserRepository } from '@/repositories';
+import { isDefined } from '@/utils';
 
 const MAX_CREATING_GOOGLE_USER_ATTEMPTS = 10;
 
@@ -110,10 +112,15 @@ export class UsersService {
 
         return user;
       } catch (error) {
+        const target =
+          error instanceof Prisma.PrismaClientKnownRequestError
+            ? error.meta?.target
+            : undefined;
         const isNicknameConflict =
           error instanceof Prisma.PrismaClientKnownRequestError &&
           error.code === 'P2002' &&
-          (error.meta?.target as string[])?.includes('nickname');
+          Array.isArray(target) &&
+          target.some((t) => t === 'nickname');
 
         if (!isNicknameConflict) {
           throw error;

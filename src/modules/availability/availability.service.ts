@@ -5,6 +5,7 @@ import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { BloomFilter } from 'bloom-filters';
+import { isDefined } from 'class-validator';
 
 import { ApiConfigService, AppEvents, EventPayloads } from '@/libs';
 import { UserIdentifiers, UserRepository } from '@/repositories';
@@ -104,7 +105,7 @@ export class AvailabilityService implements OnModuleInit {
   createNickname(basis: string): string {
     const lowerCased = basis?.toLocaleLowerCase();
 
-    if (lowerCased) {
+    if (!isDefined(lowerCased)) {
       throw new Error('No nickname basis were given to lowercase!');
     }
 

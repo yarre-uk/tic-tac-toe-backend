@@ -1,3 +1,4 @@
+import { Logger, UseGuards } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -7,17 +8,18 @@ import {
   WebSocketGateway,
   WebSocketServer,
 } from '@nestjs/websockets';
-import { Logger, UseGuards } from '@nestjs/common';
 import { Server, Socket } from 'socket.io';
-import { WsAuthGuard, SocketData } from '@/guards';
-import { WsUser } from '@/decorators';
-import type { UserPayload } from '@/modules/auth/auth.service';
-import { RoomsService } from './rooms.service';
+
 import { RoomResponseDto } from './dto';
 import { CreateRoomDto } from './dto';
 import { UpdateRoomDto } from './dto';
-import { isDefined } from '@/utils';
+import { RoomsService } from './rooms.service';
+
 import { SocketEvent } from '@/constants';
+import { WsUser } from '@/decorators';
+import { WsAuthGuard, SocketData } from '@/guards';
+import type { UserPayload } from '@/modules/auth/auth.service';
+import { isDefined } from '@/utils';
 
 const TIME_BEFORE_AUTO_LEAVE = 60 * 1000;
 

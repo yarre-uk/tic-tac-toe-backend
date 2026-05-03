@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
 import { Role } from '@/generated/prisma/enums';
 
 export interface UserLike {

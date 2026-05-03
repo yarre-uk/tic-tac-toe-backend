@@ -2,7 +2,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 /* eslint-disable @typescript-eslint/no-unsafe-member-access */
 
-import { Prisma } from '@/generated/prisma/client';
 import {
   ArgumentsHost,
   BadRequestException,
@@ -16,6 +15,8 @@ import {
   UnauthorizedException,
 } from '@nestjs/common';
 import { Response } from 'express';
+
+import { Prisma } from '@/generated/prisma/client';
 
 @Catch()
 export class GlobalExceptionFilter implements ExceptionFilter {

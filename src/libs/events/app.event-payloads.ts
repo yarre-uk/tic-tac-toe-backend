@@ -1,5 +1,6 @@
-import { Role } from '@/generated/prisma/enums';
-import { AppEvents } from './app.events';
+import type { AppEvents } from './app.events';
+
+import type { Role } from '@/generated/prisma/enums';
 
 export interface EventPayloads {
   [AppEvents.USER_CREATED]: {

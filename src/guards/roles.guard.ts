@@ -4,9 +4,11 @@ import {
   Injectable,
   InternalServerErrorException,
 } from '@nestjs/common';
-import { Observable } from 'rxjs';
 import { Reflector } from '@nestjs/core';
+import { Observable } from 'rxjs';
+
 import { isDefined } from '../utils';
+
 import { Role } from '@/generated/prisma/enums';
 import { UserPayload } from '@/modules/auth/auth.service';
 

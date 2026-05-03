@@ -1,10 +1,11 @@
-import { ApiConfigService } from '@/libs';
 import { Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
-import { isDefined } from '@/utils';
 import { Strategy, VerifyCallback, Profile } from 'passport-google-oauth20';
+
+import { ApiConfigService } from '@/libs';
 import { AvailabilityService } from '@/modules/availability';
 import { UsersService } from '@/modules/users';
+import { isDefined } from '@/utils';
 
 @Injectable()
 export class GoogleStrategy extends PassportStrategy(Strategy, 'google') {

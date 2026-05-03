@@ -1,13 +1,16 @@
-import { Test, TestingModule } from '@nestjs/testing';
 import {
   BadRequestException,
   ForbiddenException,
   NotFoundException,
 } from '@nestjs/common';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+
+import { RoomsService } from './rooms.service';
+
 import { RoomStatus } from '@/generated/prisma/enums';
 import { PrismaService } from '@/libs';
 import { RoomRepository } from '@/repositories';
-import { RoomsService } from './rooms.service';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 

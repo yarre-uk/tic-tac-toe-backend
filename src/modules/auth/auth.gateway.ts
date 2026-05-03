@@ -1,19 +1,21 @@
+import { Inject } from '@nestjs/common';
+import { JwtService } from '@nestjs/jwt';
 import {
   ConnectedSocket,
   MessageBody,
   SubscribeMessage,
   WebSocketGateway,
 } from '@nestjs/websockets';
-import { Inject } from '@nestjs/common';
-import { JwtService } from '@nestjs/jwt';
 import { WsException } from '@nestjs/websockets';
-import type { Socket } from 'socket.io';
 import Redis from 'ioredis';
-import { REDIS_CLIENT_KEY } from '@/libs/redis/redis.module';
-import { SocketData } from '@/guards';
+import type { Socket } from 'socket.io';
+
 import type { UserPayload } from './auth.service';
-import { isDefined } from '@/utils';
+
 import { SocketEvent } from '@/constants';
+import { SocketData } from '@/guards';
+import { REDIS_CLIENT_KEY } from '@/libs/redis/redis.module';
+import { isDefined } from '@/utils';
 
 @WebSocketGateway({ namespace: '/ws', cors: { origin: '*' } })
 export class AuthGateway {

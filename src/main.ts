@@ -1,13 +1,14 @@
-import { NestFactory } from '@nestjs/core';
-import { NestExpressApplication } from '@nestjs/platform-express';
-import { IoAdapter } from '@nestjs/platform-socket.io';
-import { AppModule } from './app.module';
-import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
-import cookieParser from 'cookie-parser';
 import { ValidationPipe } from '@nestjs/common';
-import helmet from 'helmet';
-import { NextFunction, Request, Response } from 'express';
+import { NestFactory } from '@nestjs/core';
+import type { NestExpressApplication } from '@nestjs/platform-express';
+import { IoAdapter } from '@nestjs/platform-socket.io';
+import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
+import type { NextFunction, Request, Response } from 'express';
+import helmet from 'helmet';
+
+import { AppModule } from './app.module';
 
 const PORT = process.env.PORT ?? 3000;
 const SWAGGER_ROUTE = 'api';

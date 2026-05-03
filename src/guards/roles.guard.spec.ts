@@ -1,6 +1,9 @@
-import { ExecutionContext, InternalServerErrorException } from '@nestjs/common';
-import { Reflector } from '@nestjs/core';
+import type { ExecutionContext } from '@nestjs/common';
+import { InternalServerErrorException } from '@nestjs/common';
+import type { Reflector } from '@nestjs/core';
+
 import { RolesGuard } from './roles.guard';
+
 import { Role } from '@/generated/prisma/enums';
 import type { UserPayload } from '@/modules/auth/auth.service';
 

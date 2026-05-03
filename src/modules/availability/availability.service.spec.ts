@@ -1,11 +1,15 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { BloomFilter } from 'bloom-filters';
 import { Worker } from 'worker_threads';
+
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
+import { BloomFilter } from 'bloom-filters';
+
 import { AvailabilityService } from './availability.service';
-import { UserRepository } from '@/repositories';
-import { ApiConfigService } from '@/libs';
-import type { WorkerResult } from '@/workers/bloom-filter.worker';
+
 import { Role } from '@/generated/prisma/enums';
+import { ApiConfigService } from '@/libs';
+import { UserRepository } from '@/repositories';
+import type { WorkerResult } from '@/workers/bloom-filter.worker';
 
 // ─── Module-level mocks (hoisted by Jest before imports) ─────────────────────
 

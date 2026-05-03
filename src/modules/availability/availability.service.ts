@@ -1,12 +1,15 @@
 import * as path from 'path';
 import { Worker } from 'worker_threads';
-import { ApiConfigService, AppEvents, EventPayloads } from '@/libs';
+
 import { Injectable, Logger, OnModuleInit } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { BloomFilter } from 'bloom-filters';
-import { WorkerInput, WorkerResult } from '@/workers/bloom-filter.worker';
+import { isDefined } from 'class-validator';
+
+import { ApiConfigService, AppEvents, EventPayloads } from '@/libs';
 import { UserIdentifiers, UserRepository } from '@/repositories';
+import { WorkerInput, WorkerResult } from '@/workers/bloom-filter.worker';
 
 @Injectable()
 export class AvailabilityService implements OnModuleInit {
@@ -39,6 +42,7 @@ export class AvailabilityService implements OnModuleInit {
   }
 
   private runWorker(identifiers: UserIdentifiers[]): Promise<WorkerResult> {
+    // eslint-disable-next-line sonarjs/null-dereference
     const ext = __filename.endsWith('.ts') ? '.ts' : '.js';
     const workerPath = path.resolve(
       __dirname,
@@ -79,15 +83,18 @@ export class AvailabilityService implements OnModuleInit {
 
   @OnEvent(AppEvents.USER_CREATED)
   onUserCreated(payload: EventPayloads[typeof AppEvents.USER_CREATED]) {
-    this.addNickname(payload.nickname);
-
-    if (payload.email) {
-      this.addEmail(payload.email);
-    }
+    this.addUserIdentifiers(payload);
   }
 
   @OnEvent(AppEvents.USER_UPDATED)
   onUserUpdated(payload: EventPayloads[typeof AppEvents.USER_UPDATED]) {
+    this.addUserIdentifiers(payload);
+  }
+
+  private addUserIdentifiers(payload: {
+    nickname: string;
+    email?: string | null;
+  }) {
     this.addNickname(payload.nickname);
 
     if (payload.email) {
@@ -96,7 +103,11 @@ export class AvailabilityService implements OnModuleInit {
   }
 
   createNickname(basis: string): string {
-    const lowerCased = basis.toLocaleLowerCase();
+    const lowerCased = basis?.toLocaleLowerCase();
+
+    if (!isDefined(lowerCased)) {
+      throw new Error('No nickname basis were given to lowercase!');
+    }
 
     if (!this.hasNickname(lowerCased)) {
       return lowerCased;

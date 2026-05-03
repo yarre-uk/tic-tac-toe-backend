@@ -1,15 +1,19 @@
 /* eslint-disable @typescript-eslint/no-unsafe-assignment */
-import { Test, TestingModule } from '@nestjs/testing';
 import { NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { JwtService } from '@nestjs/jwt';
+import type { TestingModule } from '@nestjs/testing';
+import { Test } from '@nestjs/testing';
 import { hash, compare } from 'bcrypt';
 import { v7 as uuidv7 } from 'uuid';
-import { AuthService } from './auth.service';
+
 import { UsersService } from '../users';
+
+import { AuthService } from './auth.service';
+
+import { Role } from '@/generated/prisma/enums';
 import { PrismaService } from '@/libs';
 import { ApiConfigService } from '@/libs';
 import { REDIS_CLIENT_KEY } from '@/libs/redis/redis.module';
-import { Role } from '@/generated/prisma/enums';
 
 // ─── Module-level mocks (hoisted by Jest before imports) ─────────────────────
 

@@ -1,7 +1,8 @@
 import { DynamicModule, Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
-import { ApiConfigService } from './config.service';
+
 import { EnvSchema } from './config.schema';
+import { ApiConfigService } from './config.service';
 
 interface ApiConfigModuleOptions {
   global: boolean;

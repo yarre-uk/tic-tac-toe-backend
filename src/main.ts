@@ -11,7 +11,8 @@ import helmet from 'helmet';
 import { AppModule } from './app.module';
 
 const PORT = process.env.PORT ?? 3000;
-const SWAGGER_ROUTE = 'api';
+const APP_PREFIX = 'api/v1';
+const SWAGGER_ROUTE = `docs`;
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
@@ -51,13 +52,15 @@ async function bootstrap() {
   );
 
   const documentFactory = () => SwaggerModule.createDocument(app, config);
-  SwaggerModule.setup(SWAGGER_ROUTE, app, documentFactory);
+  SwaggerModule.setup(`${APP_PREFIX}/${SWAGGER_ROUTE}`, app, documentFactory);
+
+  app.setGlobalPrefix(APP_PREFIX);
 
   await app.listen(PORT);
 
-  console.log(`Backend is running on: http://localhost:${PORT}`);
+  console.log(`Backend is running on: http://localhost:${PORT}/${APP_PREFIX}`);
   console.log(
-    `Swagger is running on: http://localhost:${PORT}/${SWAGGER_ROUTE}`,
+    `Swagger is running on: http://localhost:${PORT}/${APP_PREFIX}/${SWAGGER_ROUTE}`,
   );
   console.log(`WebSocket gateway available at: ws://localhost:${PORT}/ws`);
 }

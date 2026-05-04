@@ -32,6 +32,12 @@ async function bootstrap() {
     helmetMiddleware(req, res, next);
   });
 
+  app.enableCors({
+    credentials: true,
+    origin: ['http://localhost:5173'],
+    methods: ['GET', 'POST', 'DELETE', 'PATCH'],
+  });
+
   const config = new DocumentBuilder()
     .setTitle('Tic Tac Toe API')
     .setDescription('Backend API for the tic-tac-toe application')

@@ -5,10 +5,9 @@ import { ScheduleModule } from '@nestjs/schedule';
 import { ThrottlerGuard, ThrottlerModule } from '@nestjs/throttler';
 
 import { AppController } from './app.controller';
-import { GlobalExceptionFilter } from './exceptions/exception.filter';
+import { GlobalExceptionFilter } from './exceptions';
 import { JwtAuthGuard, RolesGuard } from './guards';
-import { LoggingInterceptor } from './interceptors/logging.interceptor';
-import { TransformInterceptor } from './interceptors/transform.interceptor';
+import { LoggingInterceptor, TransformInterceptor } from './interceptors';
 import {
   ApiConfigModule,
   ApiConfigService,

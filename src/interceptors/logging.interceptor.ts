@@ -8,9 +8,7 @@ import {
 import { Request } from 'express';
 import { Observable, tap } from 'rxjs';
 
-export interface Response<T> {
-  data: T;
-}
+import { Response } from './types';
 
 @Injectable()
 export class LoggingInterceptor<T> implements NestInterceptor<T, Response<T>> {

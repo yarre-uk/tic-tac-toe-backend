@@ -134,6 +134,28 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     };
   }
 
+  @SubscribeMessage(SocketEvent.Rooms.REJOIN)
+  async handleRejoin(
+    @WsUser() user: UserPayload,
+    @MessageBody() body: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    this.cancelPendingLeave(user.sub);
+
+    const room = await this.roomsService.rejoin(user.sub, body.roomId);
+
+    await client.join(room.id);
+
+    client
+      .to(room.id)
+      .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(room));
+
+    return {
+      event: SocketEvent.Rooms.REJOINED,
+      data: RoomResponseDto.from(room),
+    };
+  }
+
   @SubscribeMessage(SocketEvent.Rooms.LEAVE)
   async handleLeave(
     @WsUser() user: UserPayload,

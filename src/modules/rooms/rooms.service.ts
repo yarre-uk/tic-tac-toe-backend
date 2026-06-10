@@ -92,6 +92,16 @@ export class RoomsService {
     });
   }
 
+  async rejoin(userId: string, roomId: string): Promise<RoomWithPlayers> {
+    const room = await this.findOne(roomId);
+
+    if (!room.players.some((p) => p.id === userId)) {
+      throw new BadRequestException('You are not a member of this room');
+    }
+
+    return room;
+  }
+
   async leave(userId: string) {
     const user = await this.prisma.user.findUnique({ where: { id: userId } });
 

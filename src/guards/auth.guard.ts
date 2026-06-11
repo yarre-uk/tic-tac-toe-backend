@@ -47,7 +47,7 @@ export class JwtAuthGuard implements CanActivate {
     try {
       payload = this.jwtService.verify<UserPayload>(accessToken);
     } catch {
-      throw new UnauthorizedException('Provided token is invalid!');
+      throw new UnauthorizedException('Token is invalid or expired');
     }
 
     const isBlacklisted = await this.redis.exists(`blacklist:${payload.jti}`);

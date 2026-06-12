@@ -93,10 +93,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     await client.join(room.id);
 
-    return {
-      event: SocketEvent.Rooms.CREATED,
-      data: RoomResponseDto.from(room),
-    };
+    return RoomResponseDto.from(room);
   }
 
   @SubscribeMessage(SocketEvent.Rooms.JOIN)
@@ -130,10 +127,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .to(newRoom.id)
       .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(newRoom));
 
-    return {
-      event: SocketEvent.Rooms.JOINED,
-      data: RoomResponseDto.from(newRoom),
-    };
+    return RoomResponseDto.from(newRoom);
   }
 
   @SubscribeMessage(SocketEvent.Rooms.REJOIN)
@@ -152,10 +146,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .to(room.id)
       .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(room));
 
-    return {
-      event: SocketEvent.Rooms.REJOINED,
-      data: RoomResponseDto.from(room),
-    };
+    return RoomResponseDto.from(room);
   }
 
   @SubscribeMessage(SocketEvent.Rooms.LEAVE)
@@ -180,7 +171,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(result));
     }
 
-    return { event: SocketEvent.Rooms.LEFT };
+    return null;
   }
 
   @SubscribeMessage(SocketEvent.Rooms.UPDATE)
@@ -202,9 +193,6 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .to(room.id)
       .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(room));
 
-    return {
-      event: SocketEvent.Rooms.UPDATED,
-      data: RoomResponseDto.from(room),
-    };
+    return RoomResponseDto.from(room);
   }
 }

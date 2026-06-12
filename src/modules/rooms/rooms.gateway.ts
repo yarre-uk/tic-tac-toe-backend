@@ -1,4 +1,4 @@
-import { Logger, UseFilters, UseGuards } from '@nestjs/common';
+import { Logger, UseFilters, UseGuards, UseInterceptors } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -19,6 +19,7 @@ import { SocketEvent } from '@/constants';
 import { WsUser } from '@/decorators';
 import { WsExceptionFilter } from '@/exceptions';
 import { WsAuthGuard, SocketData } from '@/guards';
+import { WsLoggingInterceptor } from '@/interceptors';
 import type { UserPayload } from '@/modules/auth/auth.service';
 import { isDefined } from '@/utils';
 
@@ -28,6 +29,7 @@ const TIME_BEFORE_AUTO_LEAVE = 60 * 1000;
 @WebSocketGateway({ namespace: '/ws', cors: { origin: '*' } })
 @UseFilters(new WsExceptionFilter())
 @UseGuards(WsAuthGuard)
+@UseInterceptors(new WsLoggingInterceptor())
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   private server!: Server;

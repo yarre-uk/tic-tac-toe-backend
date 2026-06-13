@@ -1,4 +1,4 @@
-import { Logger, UseFilters, UseGuards } from '@nestjs/common';
+import { Logger, UseFilters, UseGuards, UseInterceptors } from '@nestjs/common';
 import {
   ConnectedSocket,
   MessageBody,
@@ -19,6 +19,7 @@ import { SocketEvent } from '@/constants';
 import { WsUser } from '@/decorators';
 import { WsExceptionFilter } from '@/exceptions';
 import { WsAuthGuard, SocketData } from '@/guards';
+import { WsLoggingInterceptor } from '@/interceptors';
 import type { UserPayload } from '@/modules/auth/auth.service';
 import { isDefined } from '@/utils';
 
@@ -28,6 +29,7 @@ const TIME_BEFORE_AUTO_LEAVE = 60 * 1000;
 @WebSocketGateway({ namespace: '/ws', cors: { origin: '*' } })
 @UseFilters(new WsExceptionFilter())
 @UseGuards(WsAuthGuard)
+@UseInterceptors(new WsLoggingInterceptor())
 export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   @WebSocketServer()
   private server!: Server;
@@ -53,13 +55,12 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
 
-    const user = (client.data as SocketData).user;
-    if (!isDefined(user)) {
+    const data = client.data as SocketData;
+    if (!isDefined(data.user)) {
       return;
     }
 
-    // Socket.IO always adds the socket's own id as a room, so filter it out.
-    const roomId = [...client.rooms].find((room) => room !== client.id);
+    const { user, roomId } = data;
 
     const timer = setTimeout(() => {
       this.pendingLeaves.delete(user.sub);
@@ -67,7 +68,12 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       void this.roomsService
         .leave(user.sub)
         .then((result) => {
-          if (isDefined(result) && isDefined(roomId)) {
+          // Notify other users
+          if (
+            isDefined(result) &&
+            isDefined(roomId) &&
+            typeof roomId === 'string'
+          ) {
             this.server
               .to(roomId)
               .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(result));
@@ -90,11 +96,9 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const room = await this.roomsService.create(user.sub, dto);
 
     await client.join(room.id);
+    (client.data as SocketData).roomId = room.id;
 
-    return {
-      event: SocketEvent.Rooms.CREATED,
-      data: RoomResponseDto.from(room),
-    };
+    return RoomResponseDto.from(room);
   }
 
   @SubscribeMessage(SocketEvent.Rooms.JOIN)
@@ -121,6 +125,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     await client.join(newRoom.id);
+    (client.data as SocketData).roomId = newRoom.id;
 
     // Notify the other player in the room. client.to() excludes the sender.
     // Shortened version of server.to(room.id).except(client.id).emit()
@@ -128,10 +133,27 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .to(newRoom.id)
       .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(newRoom));
 
-    return {
-      event: SocketEvent.Rooms.JOINED,
-      data: RoomResponseDto.from(newRoom),
-    };
+    return RoomResponseDto.from(newRoom);
+  }
+
+  @SubscribeMessage(SocketEvent.Rooms.REJOIN)
+  async handleRejoin(
+    @WsUser() user: UserPayload,
+    @MessageBody() body: { roomId: string },
+    @ConnectedSocket() client: Socket,
+  ) {
+    this.cancelPendingLeave(user.sub);
+
+    const room = await this.roomsService.rejoin(user.sub, body.roomId);
+
+    await client.join(room.id);
+    (client.data as SocketData).roomId = room.id;
+
+    client
+      .to(room.id)
+      .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(room));
+
+    return RoomResponseDto.from(room);
   }
 
   @SubscribeMessage(SocketEvent.Rooms.LEAVE)
@@ -148,6 +170,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (isDefined(currentRoomId)) {
       await client.leave(currentRoomId);
+      (client.data as SocketData).roomId = undefined;
     }
 
     if (isDefined(result) && isDefined(currentRoomId)) {
@@ -156,7 +179,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(result));
     }
 
-    return { event: SocketEvent.Rooms.LEFT };
+    return { success: true };
   }
 
   @SubscribeMessage(SocketEvent.Rooms.UPDATE)
@@ -178,9 +201,6 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       .to(room.id)
       .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(room));
 
-    return {
-      event: SocketEvent.Rooms.UPDATED,
-      data: RoomResponseDto.from(room),
-    };
+    return RoomResponseDto.from(room);
   }
 }

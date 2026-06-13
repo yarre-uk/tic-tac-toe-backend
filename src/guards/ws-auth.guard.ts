@@ -16,6 +16,7 @@ import { isDefined } from '@/utils';
 export interface SocketData {
   user: UserPayload;
   token: string;
+  roomId?: string;
 }
 
 @Injectable()

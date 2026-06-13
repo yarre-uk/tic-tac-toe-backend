@@ -3,7 +3,6 @@ import {
   Controller,
   Get,
   Post,
-  Query,
   Req,
   Res,
   UnauthorizedException,
@@ -12,7 +11,6 @@ import {
 import {
   ApiBearerAuth,
   ApiCookieAuth,
-  ApiExcludeEndpoint,
   ApiFoundResponse,
   ApiNoContentResponse,
   ApiOkResponse,
@@ -147,8 +145,28 @@ export class AuthController {
   @ApiNoContentResponse()
   @ApiBearerAuth()
   @Post('change-password')
-  async changePassword(@Body() dto: ChangePasswordDto) {
-    return this.authService.changePassword(dto);
+  async changePassword(
+    @Res({ passthrough: true }) response: Response,
+    @Req() request: Request,
+    @Body() dto: ChangePasswordDto,
+  ) {
+    const refreshToken = request.cookies[REFRESH_TOKEN_KEY] as
+      | string
+      | undefined;
+
+    if (!isDefined(refreshToken)) {
+      throw new UnauthorizedException('No refresh token found');
+    }
+
+    const {
+      accessToken,
+      refreshToken: newRefreshToken,
+    }: { accessToken: string; refreshToken: string } =
+      await this.authService.changePassword(dto);
+
+    this.setRefreshTokenCookie(response, newRefreshToken);
+
+    return { accessToken };
   }
 
   @ApiOperation({ summary: 'Initiate Google OAuth2 flow' })
@@ -181,12 +199,5 @@ export class AuthController {
     response.redirect(
       `${this.configService.get('FRONTEND_URL')}/auth?token=${tokens.accessToken}`,
     );
-  }
-
-  @ApiExcludeEndpoint()
-  @IsPublic()
-  @Get('/')
-  devTokenCapture(@Query('token') token: string) {
-    return { accessToken: token };
   }
 }

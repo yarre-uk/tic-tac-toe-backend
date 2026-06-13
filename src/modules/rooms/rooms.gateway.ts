@@ -179,7 +179,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
         .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(result));
     }
 
-    return null;
+    return { success: true };
   }
 
   @SubscribeMessage(SocketEvent.Rooms.UPDATE)

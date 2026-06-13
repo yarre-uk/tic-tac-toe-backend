@@ -251,7 +251,7 @@ describe('AuthService', () => {
       });
     });
 
-    it('should add the access token to the Redis blocklist when TTL is still positive', async () => {
+    it('should add the access token to the Redis blacklist when TTL is still positive', async () => {
       // createdAt = now → remaining TTL ≈ 900s > 0
       mockPrisma.refreshToken.findUnique.mockResolvedValue(
         makeTokenRecord({ createdAt: new Date() }),
@@ -260,7 +260,7 @@ describe('AuthService', () => {
       await service.logOut(REFRESH_TOKEN);
 
       expect(mockRedis.set).toHaveBeenCalledWith(
-        `blocklist:${ACCESS_JTI}`,
+        `blacklist:${ACCESS_JTI}`,
         '1',
         'EX',
         expect.any(Number),
@@ -284,7 +284,7 @@ describe('AuthService', () => {
       });
 
       await expect(service.logOut('bad.token')).rejects.toThrow(
-        new UnauthorizedException('Provided token is invalid!'),
+        new UnauthorizedException('Token is invalid or expired'),
       );
     });
 
@@ -336,7 +336,7 @@ describe('AuthService', () => {
       });
 
       await expect(service.refresh('bad.token')).rejects.toThrow(
-        new UnauthorizedException('Provided token is invalid!'),
+        new UnauthorizedException('Token is invalid or expired'),
       );
     });
 
@@ -501,20 +501,28 @@ describe('AuthService', () => {
       newPassword: 'NewStr0ng!Pass',
     };
 
-    it('should hash the new password, update it, and revoke all refresh tokens', async () => {
+    it('should hash the new password, revoke all sessions, and return new tokens', async () => {
       (compare as jest.Mock).mockResolvedValue(true);
       (hash as jest.Mock).mockResolvedValue('$2b$10$newhash');
 
-      await service.changePassword(dto);
+      const result = await service.changePassword(dto);
 
       expect(compare).toHaveBeenCalledWith(RAW_PASSWORD, HASHED_PASSWORD);
       expect(hash).toHaveBeenCalledWith('NewStr0ng!Pass', 10);
       expect(mockUsers.update).toHaveBeenCalledWith(USER_ID, {
         password: '$2b$10$newhash',
       });
+      expect(mockPrisma.refreshToken.findMany).toHaveBeenCalledWith({
+        where: { userId: USER_ID, isActive: true },
+        select: { id: true, accessTokenJti: true, createdAt: true },
+      });
       expect(mockPrisma.refreshToken.updateMany).toHaveBeenCalledWith({
-        where: { userId: USER_ID },
+        where: { id: { in: [] } },
         data: { isActive: false },
+      });
+      expect(result).toEqual({
+        accessToken: ACCESS_TOKEN,
+        refreshToken: REFRESH_TOKEN,
       });
     });
 

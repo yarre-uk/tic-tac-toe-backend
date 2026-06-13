@@ -55,13 +55,12 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
   handleDisconnect(client: Socket) {
     this.logger.log(`Client disconnected: ${client.id}`);
 
-    const user = (client.data as SocketData).user;
-    if (!isDefined(user)) {
+    const data = client.data as SocketData;
+    if (!isDefined(data.user)) {
       return;
     }
 
-    // Socket.IO always adds the socket's own id as a room, so filter it out.
-    const roomId = [...client.rooms].find((room) => room !== client.id);
+    const { user, roomId } = data;
 
     const timer = setTimeout(() => {
       this.pendingLeaves.delete(user.sub);
@@ -69,7 +68,12 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
       void this.roomsService
         .leave(user.sub)
         .then((result) => {
-          if (isDefined(result) && isDefined(roomId)) {
+          // Notify other users
+          if (
+            isDefined(result) &&
+            isDefined(roomId) &&
+            typeof roomId === 'string'
+          ) {
             this.server
               .to(roomId)
               .emit(SocketEvent.Rooms.UPDATED, RoomResponseDto.from(result));
@@ -92,6 +96,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const room = await this.roomsService.create(user.sub, dto);
 
     await client.join(room.id);
+    (client.data as SocketData).roomId = room.id;
 
     return RoomResponseDto.from(room);
   }
@@ -120,6 +125,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     }
 
     await client.join(newRoom.id);
+    (client.data as SocketData).roomId = newRoom.id;
 
     // Notify the other player in the room. client.to() excludes the sender.
     // Shortened version of server.to(room.id).except(client.id).emit()
@@ -141,6 +147,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
     const room = await this.roomsService.rejoin(user.sub, body.roomId);
 
     await client.join(room.id);
+    (client.data as SocketData).roomId = room.id;
 
     client
       .to(room.id)
@@ -163,6 +170,7 @@ export class RoomsGateway implements OnGatewayConnection, OnGatewayDisconnect {
 
     if (isDefined(currentRoomId)) {
       await client.leave(currentRoomId);
+      (client.data as SocketData).roomId = undefined;
     }
 
     if (isDefined(result) && isDefined(currentRoomId)) {

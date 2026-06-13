@@ -125,7 +125,7 @@ export class AuthService {
     try {
       payload = this.jwtService.verify<RefreshTokenPayload>(refreshToken);
     } catch {
-      throw new UnauthorizedException('Provided token is invalid!');
+      throw new UnauthorizedException('Token is invalid or expired');
     }
 
     const stored = await this.prismaService.refreshToken.findUnique({
@@ -162,7 +162,7 @@ export class AuthService {
     try {
       payload = this.jwtService.verify<RefreshTokenPayload>(refreshToken);
     } catch {
-      throw new UnauthorizedException('Provided token is invalid!');
+      throw new UnauthorizedException('Token is invalid or expired');
     }
 
     const stored = await this.prismaService.refreshToken.findUnique({

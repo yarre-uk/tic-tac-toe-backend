@@ -99,7 +99,7 @@ describe('JwtAuthGuard', () => {
       const { ctx } = createContext(`Bearer bad.token`);
 
       await expect(guard.canActivate(ctx)).rejects.toThrow(
-        new UnauthorizedException('Provided token is invalid!'),
+        new UnauthorizedException('Token is invalid or expired'),
       );
     });
   });

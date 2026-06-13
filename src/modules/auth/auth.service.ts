@@ -148,7 +148,7 @@ export class AuthService {
     const ttl = this._accessTokenRemainingTtl(stored.createdAt);
     if (ttl > 0) {
       await this.redis.set(
-        `blocklist:${stored.accessTokenJti}`,
+        `blacklist:${stored.accessTokenJti}`,
         '1',
         'EX',
         ttl,
@@ -184,6 +184,16 @@ export class AuthService {
       where: { id: payload.jti },
       data: { isActive: false },
     });
+
+    const ttl = this._accessTokenRemainingTtl(stored.createdAt);
+    if (ttl > 0) {
+      await this.redis.set(
+        `blacklist:${stored.accessTokenJti}`,
+        '1',
+        'EX',
+        ttl,
+      );
+    }
 
     return this.issueTokens(stored.user.id, stored.user.role);
   }
@@ -250,7 +260,7 @@ export class AuthService {
     }
   }
 
-  async changePassword(dto: ChangePasswordDto) {
+  async changePassword(dto: ChangePasswordDto): Promise<TokensResponse> {
     const user = await this.usersService.findByNickname(dto.nickname);
 
     const isPasswordCorrect = await compare(
@@ -268,9 +278,8 @@ export class AuthService {
       password: newPasswordHashed,
     });
 
-    await this.prismaService.refreshToken.updateMany({
-      where: { userId: user.id },
-      data: { isActive: false },
-    });
+    await this.revokeAllSessions(user.id);
+
+    return this.issueTokens(user.id, user.role);
   }
 }

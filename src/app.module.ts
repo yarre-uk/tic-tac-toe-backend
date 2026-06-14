@@ -15,7 +15,7 @@ import {
   PrismaModule,
   RedisModule,
 } from './libs';
-import { AuthModule, UsersModule, RoomsModule } from './modules';
+import { AuthModule, ChatModule, UsersModule, RoomsModule } from './modules';
 
 @Module({
   imports: [
@@ -54,6 +54,7 @@ import { AuthModule, UsersModule, RoomsModule } from './modules';
     EventsModule,
     UsersModule,
     AuthModule,
+    ChatModule,
     RoomsModule,
   ],
   providers: [

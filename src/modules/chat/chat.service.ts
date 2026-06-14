@@ -30,12 +30,16 @@ export class ChatService {
   }
 
   async addMessage(
+    userId: string,
     roomId: string,
-    payload: Omit<ChatMessageDto, 'id' | 'sentAt'>,
+    payload: Omit<ChatMessageDto, 'id' | 'sentAt' | 'userId'>,
   ): Promise<ChatMessageDto> {
+    await this.roomsService.inRoom(userId, roomId);
+
     const message = new ChatMessageDto({
       id: uuidv7(),
       sentAt: new Date().toISOString(),
+      userId,
       ...payload,
     });
 

@@ -9,8 +9,8 @@ import { Test } from '@nestjs/testing';
 import { RoomsService } from './rooms.service';
 
 import { RoomStatus } from '@/generated/prisma/enums';
-import { PrismaService } from '@/libs';
-import { RoomRepository } from '@/repositories';
+import { PrismaService, TypedEventEmitter } from '@/libs';
+import { RoomRepository, UserRepository } from '@/repositories';
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -47,6 +47,10 @@ let mockRepo: {
   delete: jest.Mock;
 };
 
+let mockUserRepo: {
+  findById: jest.Mock;
+};
+
 let mockTx: {
   room: {
     findUnique: jest.Mock;
@@ -56,8 +60,11 @@ let mockTx: {
 };
 
 let mockPrisma: {
-  user: { findUnique: jest.Mock };
   $transaction: jest.Mock;
+};
+
+let mockEventEmitter: {
+  emit: jest.Mock;
 };
 
 // ─── Suite ────────────────────────────────────────────────────────────────────
@@ -74,6 +81,10 @@ describe('RoomsService', () => {
       delete: jest.fn(),
     };
 
+    mockUserRepo = {
+      findById: jest.fn(),
+    };
+
     mockTx = {
       room: {
         findUnique: jest.fn(),
@@ -83,17 +94,20 @@ describe('RoomsService', () => {
     };
 
     mockPrisma = {
-      user: { findUnique: jest.fn() },
       $transaction: jest
         .fn()
         .mockImplementation((cb: (tx: typeof mockTx) => unknown) => cb(mockTx)),
     };
 
+    mockEventEmitter = { emit: jest.fn() };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RoomsService,
         { provide: RoomRepository, useValue: mockRepo },
+        { provide: UserRepository, useValue: mockUserRepo },
         { provide: PrismaService, useValue: mockPrisma },
+        { provide: TypedEventEmitter, useValue: mockEventEmitter },
       ],
     }).compile();
 
@@ -132,7 +146,7 @@ describe('RoomsService', () => {
 
   describe('create', () => {
     it('should create a room and return it', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockUserRepo.findById.mockResolvedValue({
         id: OWNER_ID,
         roomId: null,
       });
@@ -149,7 +163,7 @@ describe('RoomsService', () => {
     });
 
     it('should throw BadRequestException when user is already in a room', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockUserRepo.findById.mockResolvedValue({
         id: OWNER_ID,
         roomId: ROOM_ID,
       });
@@ -185,7 +199,7 @@ describe('RoomsService', () => {
       // room has 0 players, joining makes 1 — still Waiting
       const emptyWaiting = { ...waitingRoom, players: [] };
       mockRepo.findById.mockResolvedValue(emptyWaiting);
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockUserRepo.findById.mockResolvedValue({
         id: OWNER_ID,
         roomId: null,
       });
@@ -206,7 +220,7 @@ describe('RoomsService', () => {
     it('should set status to Playing when the room reaches MAX_PLAYERS', async () => {
       // room currently has 1 player; joining fills it
       mockRepo.findById.mockResolvedValue(waitingRoom); // 1 player
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockUserRepo.findById.mockResolvedValue({
         id: PLAYER_ID,
         roomId: null,
       });
@@ -230,7 +244,7 @@ describe('RoomsService', () => {
 
     it('should leave old room first when user is already in one', async () => {
       mockRepo.findById.mockResolvedValue(waitingRoom);
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockUserRepo.findById.mockResolvedValue({
         id: PLAYER_ID,
         roomId: OLD_ROOM_ID,
       });
@@ -271,7 +285,7 @@ describe('RoomsService', () => {
 
   describe('leave', () => {
     it('should throw BadRequestException when user is not in any room', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockUserRepo.findById.mockResolvedValue({
         id: OWNER_ID,
         roomId: null,
       });
@@ -282,7 +296,7 @@ describe('RoomsService', () => {
     });
 
     it('should delete the room when the leaving user is the last player', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockUserRepo.findById.mockResolvedValue({
         id: OWNER_ID,
         roomId: ROOM_ID,
       });
@@ -301,7 +315,7 @@ describe('RoomsService', () => {
     });
 
     it('should transfer ownership when the owner leaves and another player remains', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockUserRepo.findById.mockResolvedValue({
         id: OWNER_ID,
         roomId: ROOM_ID,
       });
@@ -325,7 +339,7 @@ describe('RoomsService', () => {
     });
 
     it('should not change ownership when a non-owner player leaves', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockUserRepo.findById.mockResolvedValue({
         id: PLAYER_ID,
         roomId: ROOM_ID,
       });
@@ -348,7 +362,7 @@ describe('RoomsService', () => {
     });
 
     it('should return null when the room no longer exists at transaction time', async () => {
-      mockPrisma.user.findUnique.mockResolvedValue({
+      mockUserRepo.findById.mockResolvedValue({
         id: OWNER_ID,
         roomId: ROOM_ID,
       });

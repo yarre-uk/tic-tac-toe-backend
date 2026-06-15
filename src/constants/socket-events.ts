@@ -18,4 +18,9 @@ export const SocketEvent = {
 
     AUTH_REFRESHED: 'auth:refreshed',
   },
+
+  Chat: {
+    SEND: 'chat:send',
+    MESSAGE: 'chat:message',
+  },
 } as const;

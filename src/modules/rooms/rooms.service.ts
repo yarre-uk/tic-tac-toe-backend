@@ -10,10 +10,12 @@ import { CreateRoomDto, UpdateRoomDto } from './dto';
 import { Prisma } from '@/generated/prisma/client';
 import { RoomStatus } from '@/generated/prisma/enums';
 import { PrismaService } from '@/libs';
+import { AppEvents, TypedEventEmitter } from '@/libs';
 import {
   PlayerQuerySelection,
   RoomRepository,
   RoomWithPlayers,
+  UserRepository,
 } from '@/repositories';
 import { isDefined } from '@/utils';
 
@@ -23,7 +25,9 @@ const MAX_PLAYERS = 2;
 export class RoomsService {
   constructor(
     private readonly roomRepository: RoomRepository,
+    private readonly userRepository: UserRepository,
     private readonly prisma: PrismaService,
+    private readonly eventEmitter: TypedEventEmitter,
   ) {}
 
   findAll() {
@@ -41,7 +45,7 @@ export class RoomsService {
   }
 
   async create(userId: string, dto: CreateRoomDto) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.userRepository.findById(userId);
 
     if (isDefined(user?.roomId)) {
       throw new BadRequestException('You are already in a room');
@@ -68,7 +72,7 @@ export class RoomsService {
       throw new BadRequestException('Room is already full');
     }
 
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.userRepository.findById(userId);
 
     return this.prisma.$transaction(async (tx) => {
       let leftRoom: RoomWithPlayers | null = null;
@@ -102,16 +106,36 @@ export class RoomsService {
     return room;
   }
 
+  async inRoom(userId: string, roomId: string): Promise<void> {
+    const room = await this.findOne(roomId);
+
+    if (!room.players.some((p) => p.id === userId)) {
+      throw new ForbiddenException('You are not a member of this room');
+    }
+  }
+
   async leave(userId: string) {
-    const user = await this.prisma.user.findUnique({ where: { id: userId } });
+    const user = await this.userRepository.findById(userId);
 
     if (!isDefined(user?.roomId)) {
       throw new BadRequestException('You are not in a room');
     }
 
-    return this.prisma.$transaction((tx) =>
-      this.leaveRoom(userId, user.roomId!, tx),
+    const roomId = user.roomId;
+
+    const result = await this.prisma.$transaction((tx) =>
+      this.leaveRoom(userId, roomId, tx),
     );
+
+    // leaveRoom returns null when the last player left and the room was deleted.
+    // Only then do we clean up Redis — we don't want to wipe chat while someone
+    // is still in the room. Redis is outside the Prisma transaction so we delete
+    // after the DB commit confirms the room is gone.
+    if (!isDefined(result)) {
+      this.eventEmitter.emit(AppEvents.ROOM_DELETED, { roomId });
+    }
+
+    return result;
   }
 
   async update(userId: string, roomId: string, dto: UpdateRoomDto) {

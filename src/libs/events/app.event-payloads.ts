@@ -15,4 +15,7 @@ export interface EventPayloads {
     email: string | null;
     role: Role;
   };
+  [AppEvents.ROOM_DELETED]: {
+    roomId: string;
+  };
 }

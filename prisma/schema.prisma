@@ -30,22 +30,10 @@ model User {
 
   refreshTokens RefreshToken[]
   room          Room?          @relation(fields: [roomId], references: [id])
-  
-  roomId        String?
-}
 
-enum RoomStatus {
-  Waiting
-  Playing
-}
+  roomId String?
 
-model Room {
-  id        String     @id @default(uuid())
-  name      String?
-  status    RoomStatus @default(Waiting)
-  ownerId   String
-  players   User[]
-  createdAt DateTime   @default(now())
+  moves Move[]
 }
 
 model RefreshToken {
@@ -59,4 +47,57 @@ model RefreshToken {
   user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId, isActive])
+}
+
+enum RoomStatus {
+  Waiting
+  Playing
+}
+
+model Room {
+  id        String     @id @default(uuid())
+  name      String?
+  status    RoomStatus @default(Waiting)
+  ownerId   String
+  createdAt DateTime   @default(now())
+
+  currentGameId String? @unique
+  currentGame   Game?   @relation(fields: [currentGameId], references: [id])
+
+  players User[]
+}
+
+enum GameType {
+  TTT
+}
+
+enum GameStatus {
+  Active
+  Finished
+  Abandoned
+}
+
+model Game {
+  id         String     @id @default(uuid())
+  type       GameType
+  status     GameStatus
+  result     Json?
+  createdAt  DateTime   @default(now())
+  finishedAt DateTime?
+
+  moves Move[]
+  room  Room?
+}
+
+model Move {
+  id        String   @id @default(uuid())
+  sequence  Int
+  action    Json
+  createdAt DateTime @default(now())
+
+  gameId String
+  game   Game   @relation(fields: [gameId], references: [id])
+
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 }

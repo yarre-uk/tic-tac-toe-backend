@@ -122,17 +122,34 @@ export class RoomsService {
     }
 
     const roomId = user.roomId;
+    let currentGameId: string | null = null;
 
-    const result = await this.prisma.$transaction((tx) =>
-      this.leaveRoom(userId, roomId, tx),
-    );
+    const result = await this.prisma.$transaction(async (tx) => {
+      const room = await tx.room.findFirst({
+        where: {
+          id: roomId,
+        },
+        select: {
+          currentGameId: true,
+        },
+      });
+
+      if (isDefined(room?.currentGameId)) {
+        currentGameId = room?.currentGameId;
+      }
+
+      return this.leaveRoom(userId, roomId, tx);
+    });
 
     // leaveRoom returns null when the last player left and the room was deleted.
     // Only then do we clean up Redis — we don't want to wipe chat while someone
     // is still in the room. Redis is outside the Prisma transaction so we delete
     // after the DB commit confirms the room is gone.
     if (!isDefined(result)) {
-      this.eventEmitter.emit(AppEvents.ROOM_DELETED, { roomId });
+      this.eventEmitter.emit(AppEvents.ROOM_DELETED, {
+        roomId,
+        currentGameId,
+      });
     }
 
     return result;

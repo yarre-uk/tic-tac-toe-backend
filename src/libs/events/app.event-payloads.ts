@@ -17,5 +17,6 @@ export interface EventPayloads {
   };
   [AppEvents.ROOM_DELETED]: {
     roomId: string;
+    currentGameId: string | null;
   };
 }

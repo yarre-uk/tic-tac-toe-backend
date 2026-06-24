@@ -15,12 +15,13 @@ import { WsUser } from '@/decorators';
 import { WsExceptionFilter } from '@/exceptions';
 import { WsAuthGuard } from '@/guards';
 import { WsLoggingInterceptor } from '@/interceptors';
+import { Envs } from '@/libs';
 import type { UserPayload } from '@/modules/auth/auth.service';
 
-// Same namespace as RoomsGateway ('/ws'). NestJS merges multiple gateways on
-// the same namespace into one Socket.IO server — each gateway independently
-// registers its own @SubscribeMessage handlers on that shared server.
-@WebSocketGateway({ namespace: '/ws', cors: { origin: '*' } })
+@WebSocketGateway({
+  namespace: '/ws',
+  cors: { origin: Envs.FRONTEND_URL, credentials: true },
+})
 @UseFilters(new WsExceptionFilter())
 @UseGuards(WsAuthGuard)
 @UseInterceptors(new WsLoggingInterceptor())

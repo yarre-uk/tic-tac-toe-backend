@@ -25,4 +25,6 @@ export const EnvSchema = z.object({
   FRONTEND_URL: z.url(),
 });
 
+export const Envs = EnvSchema.parse(process.env);
+
 export type EnvSchemaInferred = z.infer<typeof EnvSchema>;

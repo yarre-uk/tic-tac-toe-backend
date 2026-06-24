@@ -20,13 +20,16 @@ import { WsUser } from '@/decorators';
 import { WsExceptionFilter } from '@/exceptions';
 import { WsAuthGuard, SocketData } from '@/guards';
 import { WsLoggingInterceptor } from '@/interceptors';
+import { Envs } from '@/libs';
 import type { UserPayload } from '@/modules/auth/auth.service';
 import { isDefined } from '@/utils';
 
 const TIME_BEFORE_AUTO_LEAVE = 60 * 1000;
 
-// TODO restrict to frontend domain
-@WebSocketGateway({ namespace: '/ws', cors: { origin: '*' } })
+@WebSocketGateway({
+  namespace: '/ws',
+  cors: { origin: Envs.FRONTEND_URL, credentials: true },
+})
 @UseFilters(new WsExceptionFilter())
 @UseGuards(WsAuthGuard)
 @UseInterceptors(new WsLoggingInterceptor())

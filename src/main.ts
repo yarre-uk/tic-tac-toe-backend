@@ -9,6 +9,7 @@ import type { NextFunction, Request, Response } from 'express';
 import helmet from 'helmet';
 
 import { AppModule } from './app.module';
+import { ApiConfigService } from './libs';
 
 const PORT = process.env.PORT ?? 3000;
 const APP_PREFIX = 'api/v1';
@@ -32,9 +33,11 @@ async function bootstrap() {
     helmetMiddleware(req, res, next);
   });
 
+  const configService = app.get(ApiConfigService);
+
   app.enableCors({
     credentials: true,
-    origin: ['http://localhost:5173'],
+    origin: [configService.get('FRONTEND_URL')],
     methods: ['GET', 'POST', 'DELETE', 'PATCH'],
   });
 

@@ -1,7 +1,6 @@
-import {
-  BadRequestException,
-  NotFoundException,
-} from '@nestjs/common';
+/* eslint-disable @typescript-eslint/no-unsafe-assignment */
+/* eslint-disable sonarjs/argument-type */
+import { BadRequestException, NotFoundException } from '@nestjs/common';
 import type { TestingModule } from '@nestjs/testing';
 import { Test } from '@nestjs/testing';
 
@@ -9,7 +8,6 @@ import { GameEngineRegistry } from './game-engine.registry';
 import { GameService } from './game.service';
 
 import { GameType } from '@/generated/prisma/enums';
-import { AppEvents } from '@/libs';
 import { REDIS_CLIENT_KEY } from '@/libs/redis/redis.module';
 import { GameRepository } from '@/repositories';
 
@@ -153,9 +151,9 @@ describe('GameService', () => {
     it('should throw NotFoundException when state is not in Redis', async () => {
       mockRedis.get.mockReset().mockResolvedValue(null);
 
-      await expect(
-        service.makeMove(GAME_ID, PLAYER_X, action),
-      ).rejects.toThrow(new NotFoundException('Game not found!'));
+      await expect(service.makeMove(GAME_ID, PLAYER_X, action)).rejects.toThrow(
+        new NotFoundException('Game not found!'),
+      );
     });
 
     it('should throw NotFoundException when meta is not in Redis', async () => {
@@ -164,17 +162,17 @@ describe('GameService', () => {
         .mockResolvedValueOnce(JSON.stringify(INITIAL_STATE))
         .mockResolvedValueOnce(null);
 
-      await expect(
-        service.makeMove(GAME_ID, PLAYER_X, action),
-      ).rejects.toThrow(new NotFoundException('Game metadata not found!'));
+      await expect(service.makeMove(GAME_ID, PLAYER_X, action)).rejects.toThrow(
+        new NotFoundException('Game metadata not found!'),
+      );
     });
 
     it('should throw BadRequestException when the move is invalid', async () => {
       mockEngine.isValidMove.mockReturnValue(false);
 
-      await expect(
-        service.makeMove(GAME_ID, PLAYER_X, action),
-      ).rejects.toThrow(new BadRequestException('This move is invalid!'));
+      await expect(service.makeMove(GAME_ID, PLAYER_X, action)).rejects.toThrow(
+        new BadRequestException('This move is invalid!'),
+      );
     });
 
     it('should save the new state to Redis after a valid move', async () => {
@@ -330,6 +328,5 @@ describe('GameService', () => {
 
       expect(mockGameRepo.abandon).not.toHaveBeenCalled();
     });
-
   });
 });

@@ -11,12 +11,12 @@ import { GameEngineRegistry } from './game-engine.registry';
 import type { GameResult } from './types';
 
 import { Room } from '@/generated/prisma/client';
-import { GameStatus, GameType } from '@/generated/prisma/enums';
-import { AppEvents, PrismaService } from '@/libs';
+import { GameType } from '@/generated/prisma/enums';
+import { AppEvents } from '@/libs';
 import { REDIS_CLIENT_KEY } from '@/libs/redis/redis.module';
+import { GameRepository, type StoredMove } from '@/repositories';
 import { isDefined } from '@/utils';
 
-// Redis key helpers — keeps key format in one place
 const stateKey = (gameId: string) => `game:${gameId}:state`;
 const movesKey = (gameId: string) => `game:${gameId}:moves`;
 const metaKey = (gameId: string) => `game:${gameId}:meta`;
@@ -26,13 +26,11 @@ type GameMeta = {
   playerIds: string[];
 };
 
-type GameMove = { userId: string; action: object };
-
 @Injectable()
 export class GameService {
   constructor(
     private readonly registry: GameEngineRegistry,
-    private readonly prisma: PrismaService,
+    private readonly gameRepository: GameRepository,
     @Inject(REDIS_CLIENT_KEY) private readonly redis: Redis,
   ) {}
 
@@ -40,25 +38,7 @@ export class GameService {
     const engine = this.registry.get(type);
     const initialState = engine.init(playerIds);
 
-    const { gameId } = await this.prisma.$transaction(async (tx) => {
-      const game = await tx.game.create({
-        data: {
-          status: GameStatus.Active,
-          type: type,
-        },
-      });
-
-      await tx.room.update({
-        where: {
-          id: roomId,
-        },
-        data: {
-          currentGameId: game.id,
-        },
-      });
-
-      return { gameId: game.id };
-    });
+    const { gameId } = await this.gameRepository.start(type, roomId);
 
     await this.redis.set(
       stateKey(gameId),
@@ -90,9 +70,7 @@ export class GameService {
     }
 
     const meta = JSON.parse(metaSerialized) as GameMeta;
-
     const engine = this.registry.get(meta.type);
-
     const state = JSON.parse(stateSerialized) as object;
 
     if (!engine.isValidMove(state, userId, action)) {
@@ -112,11 +90,9 @@ export class GameService {
       engine.dataTTL,
     );
     await this.redis.expire(metaKey(gameId), engine.dataTTL);
-
     await this.redis.rpush(
       movesKey(gameId),
-      JSON.stringify({ userId, action } satisfies GameMove),
-      engine.dataTTL,
+      JSON.stringify({ userId, action } satisfies StoredMove),
     );
 
     if (isDefined(result)) {
@@ -128,44 +104,15 @@ export class GameService {
 
   async endGame(gameId: string, result: GameResult) {
     const movesSerialized = await this.redis.lrange(movesKey(gameId), 0, -1);
-    const moves = movesSerialized.map((r) => JSON.parse(r) as GameMove);
+    const moves = movesSerialized.map((r) => JSON.parse(r) as StoredMove);
 
-    await this.prisma.$transaction([
-      this.prisma.game.update({
-        where: {
-          id: gameId,
-        },
-        data: {
-          status: GameStatus.Finished,
-          result: result,
-          finishedAt: new Date(),
-        },
-      }),
-      this.prisma.move.createMany({
-        data: moves.map((move, i) => ({
-          ...move,
-          gameId,
-          sequence: i,
-        })),
-      }),
-      this.prisma.room.update({
-        where: {
-          currentGameId: gameId,
-        },
-        data: {
-          currentGameId: null,
-        },
-      }),
-    ]);
-
+    await this.gameRepository.finish(gameId, result, moves);
     await this.redis.del(stateKey(gameId), movesKey(gameId), metaKey(gameId));
   }
 
   async abandonGame(gameId: string) {
-    return this.prisma.game.update({
-      where: { id: gameId },
-      data: { status: GameStatus.Abandoned, finishedAt: new Date() },
-    });
+    await this.gameRepository.abandon(gameId);
+    await this.redis.del(stateKey(gameId), movesKey(gameId), metaKey(gameId));
   }
 
   async getState(gameId: string) {
@@ -173,20 +120,13 @@ export class GameService {
 
     if (!isDefined(stateSerialized)) {
       await this.abandonGame(gameId);
-
       throw new NotFoundException(
         'Game state expired and could not be recovered',
       );
     }
 
     const movesSerialized = await this.redis.lrange(movesKey(gameId), 0, -1);
-
-    if (!isDefined(movesSerialized)) {
-      throw new NotFoundException('Game moves could not be found');
-    }
-
-    const moves = movesSerialized.map((r) => JSON.parse(r) as GameMove);
-
+    const moves = movesSerialized.map((r) => JSON.parse(r) as StoredMove);
     const state = JSON.parse(stateSerialized) as object;
 
     return { state, moves };

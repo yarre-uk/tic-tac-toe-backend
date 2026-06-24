@@ -7,15 +7,14 @@ import { AnyGameEngine, GAME_ENGINES } from './game-engine.interface';
 import { GameEngineRegistry } from './game-engine.registry';
 import { GameService } from './game.service';
 
+import { GameRepository } from '@/repositories';
+
 @Module({
   imports: [TicTacToeModule],
   providers: [
     GameService,
     GameEngineRegistry,
-    // When adding a second game (e.g. Chess):
-    //   1. Create ChessModule the same way as TicTacToeModule
-    //   2. Import ChessModule here
-    //   3. Add ChessEngine to the inject array and the factory return
+    GameRepository,
     {
       provide: GAME_ENGINES,
       useFactory: (ttt: TicTacToeEngine): AnyGameEngine[] => [ttt],

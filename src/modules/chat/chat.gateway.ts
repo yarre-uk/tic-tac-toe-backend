@@ -15,12 +15,12 @@ import { WsUser } from '@/decorators';
 import { WsExceptionFilter } from '@/exceptions';
 import { WsAuthGuard } from '@/guards';
 import { WsLoggingInterceptor } from '@/interceptors';
-import { Envs } from '@/libs';
+import { getEnv } from '@/libs';
 import type { UserPayload } from '@/modules/auth/auth.service';
 
 @WebSocketGateway({
   namespace: '/ws',
-  cors: { origin: Envs.FRONTEND_URL, credentials: true },
+  cors: { origin: getEnv('FRONTEND_URL'), credentials: true },
 })
 @UseFilters(new WsExceptionFilter())
 @UseGuards(WsAuthGuard)

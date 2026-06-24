@@ -53,6 +53,7 @@ let mockUserRepo: {
 
 let mockTx: {
   room: {
+    findFirst: jest.Mock;
     findUnique: jest.Mock;
     update: jest.Mock;
     delete: jest.Mock;
@@ -87,6 +88,7 @@ describe('RoomsService', () => {
 
     mockTx = {
       room: {
+        findFirst: jest.fn().mockResolvedValue({ currentGameId: null }),
         findUnique: jest.fn(),
         update: jest.fn(),
         delete: jest.fn(),
